@@ -54,13 +54,13 @@ tf.random.set_seed(seeds_for_avg[4])
 batch = 128                 # VGG 16    other 32, original 32(by Henry)
 #iterations = 50
 number_of_users = 10
-fraction = [0.1, 0.15, 0.2, 0.25, 0.33, 0.4, 0.5, 1] # NEW(by Henry)
+fraction = [0.1, 0.143, 0.15, 0.2, 0.25, 0.33, 0.4, 0.5, 1] # NEW(by Henry)
 #sparsification_percentage = 60
 
 # Slotted ALOHA settings
 transmission_probability = 1 / (number_of_users)
 # Try different number of slots in one time frame
-number_of_slots = [1, 2, 3, 4, 5, 10]
+number_of_slots = [1, 2, 3, 4, 5, 7, 10]
 number_of_timeframes = 15
 
 # sparse_gradient[0].shape
@@ -417,7 +417,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
       # Send the updated weights from server to all users
       wc = model.get_weights()
     
-      for slot in range(number_of_slots[0]):
+      for slot in range(number_of_slots[5]):
           print()
           print("**** Slot " + str(slot + 1) + " ****")
           iter = iter + 1
@@ -480,9 +480,9 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
                 #print('sparse level:', sparsification_percentage/100)
                 #sparse_gradient = top_k_sparsificate_model_weights_tf(gradient, sparsification_percentage/100)
                 #print('sparse level:', sparsification_percentage/(BIT_RATE*100))
-                print('sparse level:', fraction[7]) # NEW(by Henry)
+                print('sparse level:', fraction[1]) # NEW(by Henry)
                 #sparse_gradient = top_k_sparsificate_model_weights_tf(gradient, sparsification_percentage/(BIT_RATE*100))
-                sparse_gradient = top_k_sparsificate_model_weights_tf(gradient_with_memory, fraction[7]) # NEW(by Henry)
+                sparse_gradient = top_k_sparsificate_model_weights_tf(gradient_with_memory, fraction[1]) # NEW(by Henry)
             
                 for j in range(len(wc)):
                     memory_matrix[i][j] = gamma_momentum[0] * memory_matrix[i][j] + gradient_with_memory[j] - sparse_gradient[j]
