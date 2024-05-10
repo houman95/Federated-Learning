@@ -284,9 +284,12 @@ def calculate_update_memory_magnitude(temp_memory_matrix):
         return np.mean(magnitudes)
     return 0
 
-def adjust_transmission_probability(current_prob, target_magnitude, current_magnitude, min_prob=0.1, max_prob=1.0, sensitivity=0.05):
+def adjust_transmission_probability(current_prob, target_magnitude, current_magnitude, number_of_users, min_prob=0.1, max_prob=1.0, sensitivity=0.05):
     if target_magnitude == 0 and current_magnitude == 0:
-        new_prob = current_prob + sensitivity / 2
+        if current_prob > 0.2:
+            new_prob = 1 / number_of_users
+        else:
+            new_prob = current_prob + sensitivity / 2
     else:
         error = (target_magnitude - current_magnitude) / (target_magnitude + 1e-7)
         adjustment = sensitivity * error
@@ -757,7 +760,8 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
       print("Target Magnitude: " + str(target_magnitude))
       transmission_probability = adjust_transmission_probability(transmission_probability,
                                                                  target_magnitude,
-                                                                 current_magnitude
+                                                                 current_magnitude,
+                                                                 number_of_users
                                                                 )
       print("New transmission probability: " + str(transmission_probability))
       
