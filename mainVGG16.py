@@ -46,9 +46,9 @@ epochs = 3
 
 # change seed calculate the average
 seeds_for_avg = [5, 57, 85, 12, 29]
-rnd.seed(seeds_for_avg[4])
-np.random.seed(seeds_for_avg[4])
-tf.random.set_seed(seeds_for_avg[4])
+rnd.seed(seeds_for_avg[0])
+np.random.seed(seeds_for_avg[0])
+tf.random.set_seed(seeds_for_avg[0])
 
 #torch.cuda.empty_cache()
 batch = 128                 # VGG 16    other 32, original 32(by Henry)
@@ -62,6 +62,9 @@ transmission_probability = 1 / (number_of_users)
 # Try different number of slots in one time frame
 number_of_slots = [1, 2, 3, 4, 5, 7, 10]
 number_of_timeframes = 15
+
+# Dynamic adjustment of transmission probability settings
+target_magnitude = None  # Initialize with a sensible default or based on early observations
 
 # sparse_gradient[0].shape
 
@@ -273,6 +276,23 @@ def simulate_transmissions(number_of_users, transmission_probability):
     
     return successful_users
 
+def calculate_update_memory_magnitude(temp_memory_matrix):
+    if not temp_memory_matrix:  # Check if the list is empty
+        return 0  # Return 0 or another sensible default if no data to calculate magnitude
+    magnitudes = [np.linalg.norm(memory) for memory in temp_memory_matrix]
+    if magnitudes:  # Further check to ensure magnitudes list is not empty
+        return np.mean(magnitudes)
+    return 0
+
+def adjust_transmission_probability(current_prob, target_magnitude, current_magnitude, min_prob=0.1, max_prob=1.0, sensitivity=0.05):
+    if target_magnitude == 0 and current_magnitude == 0:
+        new_prob = current_prob + sensitivity / 2
+    else:
+        error = (target_magnitude - current_magnitude) / (target_magnitude + 1e-7)
+        adjustment = sensitivity * error
+        new_prob = np.clip(current_prob + adjustment, min_prob, max_prob)
+    return new_prob
+
 def print_model_size(mdl):
     #torch.save(mdl.state_dict(), "tmp.pt")
     mdl.save_weights('./checkpoints/tmp')
@@ -407,6 +427,8 @@ gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
 with open(out_file + timeStr + '.txt', "w") as outfile:
     memory_matrix = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
     iteration_start_time = datetime.now()  # Capture start time of the iteration
+    temp_memory_matrix = []
+    
     for _ in range(number_of_timeframes):
       print('')
       print("************ Timeframe " + str(_ + 1) + " ************")
@@ -417,7 +439,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
       # Send the updated weights from server to all users
       wc = model.get_weights()
     
-      for slot in range(number_of_slots[5]):
+      for slot in range(number_of_slots[4]):
           print()
           print("**** Slot " + str(slot + 1) + " ****")
           iter = iter + 1
@@ -480,13 +502,14 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
                 #print('sparse level:', sparsification_percentage/100)
                 #sparse_gradient = top_k_sparsificate_model_weights_tf(gradient, sparsification_percentage/100)
                 #print('sparse level:', sparsification_percentage/(BIT_RATE*100))
-                print('sparse level:', fraction[1]) # NEW(by Henry)
+                print('sparse level:', fraction[3]) # NEW(by Henry)
                 #sparse_gradient = top_k_sparsificate_model_weights_tf(gradient, sparsification_percentage/(BIT_RATE*100))
-                sparse_gradient = top_k_sparsificate_model_weights_tf(gradient_with_memory, fraction[1]) # NEW(by Henry)
+                sparse_gradient = top_k_sparsificate_model_weights_tf(gradient_with_memory, fraction[3]) # NEW(by Henry)
             
                 for j in range(len(wc)):
                     memory_matrix[i][j] = gamma_momentum[0] * memory_matrix[i][j] + gradient_with_memory[j] - sparse_gradient[j]
-            
+                    temp_memory_matrix.append(memory_matrix[i][j])
+                
                 # uncomment this line to try the original gradient instead of the sparsed one(by Henry)
                 #sparse_gradient = gradient
 
@@ -509,13 +532,6 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
 
           # Modified version
           # First, access the correct array for the current iteration
-                  '''
-                  current_iteration_memory = memory_array[iter-1]
-                  memory_element = current_iteration_memory[i, j]
-                  memory_shape = np.shape(memory_element)
-                  memory_size = np.size(memory_element)
-                  memory_reshape = np.reshape(memory_element, (memory_size,))
-                  '''
           # Not necessary to print if no compression is done(by Henry)
           #print("Layer",j,": entries to compress:",non_zero_indices.size, "total # entries:", gradient_size )
 
@@ -697,11 +713,6 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
           plt.tight_layout()
           plt.show()
 
-      #user0_grad = gradient_list[0]
-      #user1_grad = gradient_list[1]
-      #user0_grad_half = [np.multiply(user0_grad[i], 0.5) for i in range(len(user0_grad))]
-      #user1_grad_half = [np.multiply(user1_grad[i], 0.5) for i in range(len(user1_grad))]
-      #avg = [np.add(user0_grad_half[i], user1_grad_half[i]) for i in range(len(user0_grad_half))]
       if sum_terms:
         update = sum_terms[0]
         for i in range(1, len(sum_terms)):
@@ -713,11 +724,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
         model.set_weights(new_weights)
       else:
         print("No successful transmissions; skipping update.")
-        
-      # check model size
-      # print_model_size(model)
-      # compare model
-
+       
       # check test accuracy
       results = model.evaluate(X_test, Y_test)
       global_model_accuracies.append(results[1])
@@ -741,6 +748,21 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
       plt.show()
       
       index_for_plot = index_for_plot + 1
+      
+      # Dynamically adjust the transmission probability
+      current_magnitude = calculate_update_memory_magnitude(temp_memory_matrix)
+      print("Current Magnitude: "+ str(current_magnitude))
+      if target_magnitude is None:
+        target_magnitude = current_magnitude  # Set initial target based on first timeframe
+      print("Target Magnitude: " + str(target_magnitude))
+      transmission_probability = adjust_transmission_probability(transmission_probability,
+                                                                 target_magnitude,
+                                                                 current_magnitude
+                                                                )
+      print("New transmission probability: " + str(transmission_probability))
+      
+      target_magnitude = current_magnitude
+      temp_memory_matrix = []
       #np.savetxt(outfile, [[int(iter),results[1]],],fmt='%10.3e',delimiter =',')
       #np.savetxt(outfile, [results[1]],fmt='%10.3e')
     iteration_end_time = datetime.now()  
