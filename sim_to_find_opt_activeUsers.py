@@ -219,7 +219,7 @@ accuracies_for_each_iter = {user_id: [] for user_id in range(1, number_of_users 
 success_user = None
 
 # This is momentum for memory matrix
-gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
+gamma_momentum = [0.9, 0.8, 0.7, 0.5, 0.1, 1]
 
 with open(out_file + timeStr + '.txt', "w") as outfile:
     memory_matrix = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
@@ -232,6 +232,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
     
       sum_terms = []
       # Send the updated weights from server to all users
+      num_active_users = 0
       wc = model.get_weights()
     
       for slot in range(number_of_slots[0]):
@@ -246,6 +247,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
 
           for i in range(number_of_users):
             if i in successful_users:
+                num_active_users = num_active_users + 1
                 # Update the local model with the latest weights from the server before training
                 # Ensure local model starts with the latest global model weights
                 model.set_weights(wc)
@@ -297,7 +299,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
                 #sparse_gradient = gradient
             
                 for j in range(len(wc)):
-                    memory_matrix[i][j] = gamma_momentum[0] * memory_matrix[i][j] + gradient_with_memory[j] - sparse_gradient[j]
+                    memory_matrix[i][j] = gamma_momentum[5] * memory_matrix[i][j] + gradient_with_memory[j] - sparse_gradient[j]
        
         # this is the PS part
         # Communication clients to PS
@@ -337,6 +339,11 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
             update = [np.add(tmp[j], update[j]) for j in range(len(update))]
             # After going through all users, "update" contains the combined updates from all users.
             # It's like gathering bits of knowledge from everyone and putting it all together.
+            
+        # Average the updates by the number of active users
+        if num_active_users > 0:
+            update = [np.divide(u, num_active_users) for u in update]
+        
         new_weights = [np.add(wc[i], update[i]) for i in range(len(wc))]
         model.set_weights(new_weights)
       else:
