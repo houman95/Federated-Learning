@@ -399,7 +399,7 @@ with open(out_file + timeStr + '.txt', "w") as outfile:
       index_for_plot = index_for_plot + 1
       
       # Dynamically adjust the transmission probability
-      current_magnitude = calculate_update_memory_magnitude(temp_memory_matrix)
+      #current_magnitude = calculate_update_memory_magnitude(temp_memory_matrix)
       print("Current Magnitude: "+ str(current_magnitude))
       if target_magnitude is None:
         target_magnitude = current_magnitude  # Set initial target based on first timeframe
