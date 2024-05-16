@@ -3,7 +3,6 @@ from matplotlib import pyplot as plt
 import random as rnd
 import numpy as np
 import sys
-sys.path.append('/Users/wuyuheng/Downloads/FL_RD-main/csh-master')
 import time
 from datetime import datetime
 
@@ -15,27 +14,25 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers.legacy import Adam
 from tensorflow.keras.applications import VGG16
+
 #------------------------------
 # DNN settings
 learning_rate = 0.01
 epochs = 3
 
 # change seed calculate the average
-seeds_for_avg = [5, 57, 85, 12, 29]
-rnd.seed(seeds_for_avg[0])
-np.random.seed(seeds_for_avg[0])
-tf.random.set_seed(seeds_for_avg[0])
+seeds_for_avg = [42, 57, 85, 12, 29]
 
 #torch.cuda.empty_cache()
 batch = 128                 # VGG 16    other 32, original 32(by Henry)
 #iterations = 50
-number_of_users = 10
+number_of_users = 3 #10
 fraction = [0.1, 0.15, 0.2] # NEW(by Henry)
 
 # Slotted ALOHA settings
 transmission_probability = 1 / (number_of_users)
 # Try different number of slots in one time frame
-number_of_slots = [3, 5, 10]
+number_of_slots = [5, 10]
 number_of_timeframes = 15
 
 compression_type = "no compression"
@@ -68,15 +65,15 @@ def top_k_sparsificate_model_weights_tf(weights, fraction):
 def simulate_transmissions(number_of_users, transmission_probability):
     current_time = int(time.time())
     np.random.seed(current_time % 123456789)
-    
     decisions = np.random.rand(number_of_users) < transmission_probability
-    
     if np.sum(decisions) == 1:
         successful_users = [i for i, decision in enumerate(decisions) if decision]
     else:
-        successful_users = []  
-    
+        successful_users = []
     return successful_users
+
+def calculate_gradient_difference(w_before, w_after):
+    return [np.subtract(w_after[k], w_before[k]) for k in range(len(w_after))]
 
 classes = {
     0 : "airplane",
@@ -110,17 +107,8 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(num_classes, activation='softmax'),
 ])
 
-if model._name == 'VGG16':
-    opt = Adam(learning_rate=0.00005)
-    number_threshold = 500000
-elif model._name == 'resnet18':
-    opt = Adam()
-    number_threshold = 100000
-else:
-    opt = Adam(learning_rate=0.0001)
-    number_threshold = 1000
-
-model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+opt = Adam(learning_rate=0.0001)
+model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
 size_of_user_ds = int(len(X_train)/number_of_users)
@@ -130,147 +118,120 @@ for i in range(number_of_users):
     train_data_X[i] = X_train[size_of_user_ds*i:size_of_user_ds*i+size_of_user_ds]
     train_data_Y[i] = Y_train[size_of_user_ds*i:size_of_user_ds*i+size_of_user_ds]    
 
-iter = 0
-
-w_before_train = model.get_weights()
-
-print(compression_type)
-gradient_list = []
-
-index_for_plot = 2
-user_metrics = {'loss': {i + 1: [] for i in range(number_of_users)},
-                'accuracy': {i + 1: [] for i in range(number_of_users)}}
-global_model_accuracies = []
-
-accuracies_for_each_iter = {user_id: [] for user_id in range(1, number_of_users + 1)}
-success_user = None
-
-gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
-
+# Additional settings for the new requirements
 epochs_range = range(1, 11)
 num_active_users_range = range(1, 11)
-num_channel_sims = 10
+num_channel_sims = number_of_slots[1]
 
-memory_matrix = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
-iteration_start_time = datetime.now()
-for _ in range(number_of_timeframes):
-    print('')
-    print("************ Timeframe " + str(_ + 1) + " ************")
-    _, accuracy = model.evaluate(X_test, Y_test)
-    print('Test accuracy BEFORE this time frame is', accuracy)  
+# This is momentum for memory matrix
+gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
 
-    sum_terms = []
-    num_active_users = 0
-    wc = model.get_weights()
+# Store results
+results = []
+seed_count = 1
+for seed in seeds_for_avg:
+    print("************ Seed " + str(seed_count) + " ************")
+    seed_count = seed_count + 1
+    rnd.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
-    for slot in range(number_of_slots[0]):
-        print()
-        print("**** Slot " + str(slot + 1) + " ****")
-        iter = iter + 1
+    for epochs in epochs_range:
+        print("********** " + str(epochs) + " Epoch(s) **********")
+        for _ in range(number_of_timeframes):
+            print("******** Timeframe " + str(_ + 1) + " ********")
+            w_before_train = model.get_weights()
+            model.set_weights(w_before_train)
+            
+            # Initialization of memory matrix
+            memory_matrix = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
+            sparse_gradient = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
+            
+            _, initial_accuracy = model.evaluate(X_test, Y_test)
+            
+            # List to store gradients for each user
+            user_gradients = []
 
-        successful_users = simulate_transmissions(number_of_users, transmission_probability)
-        if successful_users:
-            success_user = successful_users[0] + 1
-
-        for i in range(number_of_users):
-            if i in successful_users:
-                num_active_users = num_active_users + 1
-                model.set_weights(wc)
-
-                X_train_u = train_data_X[i]
-                Y_train_u = train_data_Y[i]
+            # Train each user and calculate gradients
+            for user_id in range(number_of_users):
+                print("User: " + str(user_id + 1))
+                model.set_weights(w_before_train)
+                X_train_u = train_data_X[user_id]
+                Y_train_u = train_data_Y[user_id]
                 np.random.seed(5)
                 shuffler = np.random.permutation(len(X_train_u))
                 X_train_u = X_train_u[shuffler]
                 Y_train_u = Y_train_u[shuffler]
                 X_train_u, Y_train_u, X_validation_u, Y_validation_u = train_validation_split(X_train_u, Y_train_u)
 
-                print()
-                print('user->', i + 1)
-                history = model.fit(x=X_train_u,y=Y_train_u,
-                                      epochs = epochs,
-                                      batch_size = batch,
-                                      validation_data=(X_validation_u, Y_validation_u),
-                                      shuffle=False
-                                      )
+                history = model.fit(x=X_train_u, y=Y_train_u,
+                                    epochs=epochs,
+                                    batch_size=batch,
+                                    validation_data=(X_validation_u, Y_validation_u),
+                                    shuffle=False)
+                w_after_train = model.get_weights()
+                gradient_diff = calculate_gradient_difference(w_before_train, w_after_train)
+                gradient_diff_memory = [gradient_diff[j] + memory_matrix[user_id][j] for j in range(len(gradient_diff))]
+                sparse_gradient[user_id] = top_k_sparsificate_model_weights_tf(gradient_diff_memory, fraction[2])
+                for j in range(len(w_before_train)):
+                    memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] -    sparse_gradient[user_id][j]
+                gradient_l2_norm = np.linalg.norm([np.linalg.norm(g) for g in gradient_diff])
+                user_gradients.append((user_id, gradient_l2_norm, gradient_diff))
 
-                user_metrics['loss'][i + 1].append(history.history['loss'][-1])
-                user_metrics['accuracy'][i + 1].append(history.history['accuracy'][-1])
-                accuracies_for_each_iter[i + 1].append(history.history['accuracy'][-1])
+            # Sort users by gradient L2 norm
+            user_gradients.sort(key=lambda x: x[1], reverse=True)
 
-                _, accuracy = model.evaluate(X_test, Y_test)
+            for num_active_users in num_active_users_range:
+                print("*** " + str(num_active_users + 1) + " Active User(s) ***")
+                top_users = user_gradients[:num_active_users]
+                tx_prob = 1 / num_active_users
+                accuracy_sims = []
 
-                wu = model.get_weights()
+                for _ in range(num_channel_sims):
+                    sum_terms = [np.zeros_like(w) for w in w_before_train]
+                    for user_id, _, gradient_diff in top_users:
+                        successful_users = simulate_transmissions(num_active_users, tx_prob)
+                        if successful_users:
+                            success_user = successful_users[0] + 1
+                            sum_terms = [np.add(sum_terms[j], sparse_gradient[success_user][j]) for j in range(len(sum_terms))]
 
-                nu = len(Y_train_u)+len(Y_validation_u)
-                frac = nu/len(Y_train)
+                    if successful_users:
+                        update = [np.divide(u, num_active_users) for u in sum_terms]
+                        new_weights = [np.add(w_before_train[i], update[i]) for i in range(len(w_before_train))]
+                        model.set_weights(new_weights)
+                        
+                    _, accuracy = model.evaluate(X_test, Y_test)
 
-                gradient = [np.subtract(wu[k], wc[k]) for k in range(len(wu))]
-                gradient_with_memory = [gradient[j] + memory_matrix[i][j] for j in range(len(gradient))]
-                print('sparse level:', fraction[2])
-                sparse_gradient = top_k_sparsificate_model_weights_tf(gradient_with_memory, fraction[2])
-            
-                for j in range(len(wc)):
-                    memory_matrix[i][j] = gamma_momentum[0] * memory_matrix[i][j] + gradient_with_memory[j] - sparse_gradient[j]
-       
-                sum_terms.append([np.multiply(frac, grad) for grad in sparse_gradient])
-            else:
-                print(f"User {i + 1} did not transmit or collision occurred.")
-            model.set_weights(wc)
+                    results.append({
+                        'seed': seed,
+                        'epochs': epochs,
+                        'num_active_users': num_active_users,
+                        'accuracy': accuracy
+                    })
 
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8))     
-        for user, losses in user_metrics['loss'].items():
-            axs[0].plot(range(1, len(losses) + 1), losses, label=f'User {user}', marker='o')
-        axs[0].set_title('Loss per User over Slots')
-        axs[0].set_xlabel('Slot')
-        axs[0].set_ylabel('Loss')
-        axs[0].legend(loc = 'upper left', bbox_to_anchor=(1, 1))
-  
-        for user, accuracies in user_metrics['accuracy'].items():
-            axs[1].plot(range(1, len(accuracies) + 1), accuracies, label=f'User {user}', marker='o')
-        axs[1].set_title('Accuracy per User over Slots')
-        axs[1].set_xlabel('Slot')
-        axs[1].set_ylabel('Accuracy')
-        axs[1].legend(loc = 'upper left', bbox_to_anchor=(1, 1))
-        
-        plt.tight_layout()
-        plt.show()
+optimal_num_active_users = {}
 
-    if sum_terms:
-        update = sum_terms[0]
-        for i in range(1, len(sum_terms)):
-            tmp = sum_terms[i]
-            update = [np.add(tmp[j], update[j]) for j in range(len(update))]
-        
-        if num_active_users > 0:
-            update = [np.divide(u, num_active_users) for u in update]
-        
-        new_weights = [np.add(wc[i], update[i]) for i in range(len(wc))]
-        model.set_weights(new_weights)
-    else:
-        print("No successful transmissions; skipping update.")
+for result in results:
+    key = (result['seed'], result['epochs'])
+    if key not in optimal_num_active_users:
+        optimal_num_active_users[key] = []
+    optimal_num_active_users[key].append(result['accuracy'])
 
-    results = model.evaluate(X_test, Y_test)
-    global_model_accuracies.append(results[1])
-    
-    for key in accuracies_for_each_iter:
-        if key != success_user or success_user is None:
-            accuracies_for_each_iter[key].append(results[1])
-    success_user = None
-    
-    print()
-    print('Test accuracy AFTER PS aggregation',results[1])
+for key, accuracies in optimal_num_active_users.items():
+    avg_accuracy = np.mean(accuracies)
+    optimal_num_active_users[key] = avg_accuracy
 
-    plt.figure(figsize=(10, 4))
-    plt.plot(range(1, index_for_plot), global_model_accuracies, label='Global Accuracy', marker = 'o')
-    plt.title('Global Model Accuracy over Time Frames')
-    plt.xlabel('Timeframe')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.show()
-    
-    index_for_plot = index_for_plot + 1
+print("Optimal number of active users and their accuracies:")
+for key, accuracy in optimal_num_active_users.items():
+    print(f"Seed: {key[0]}, Epochs: {key[1]}, Accuracy: {accuracy:.4f}")
 
-iteration_end_time = datetime.now()  
-iteration_duration = iteration_end_time - iteration_start_time
-print(f'This total process took {iteration_duration} to complete.')
+# Plotting
+epochs = list(epochs_range)
+optimal_users = [np.argmax([optimal_num_active_users[(seed, epoch)] for seed in seeds_for_avg]) + 1 for epoch in epochs]
+
+plt.plot(epochs, optimal_users, marker='o')
+plt.xlabel('Epochs')
+plt.ylabel('Optimal Number of Active Users')
+plt.title('Optimal Number of Active Users vs. Epochs')
+plt.grid(True)
+plt.show()
