@@ -26,7 +26,7 @@ seeds_for_avg = [42, 57, 85, 12, 29]
 #torch.cuda.empty_cache()
 batch = 128                 # VGG 16    other 32, original 32(by Henry)
 #iterations = 50
-number_of_users = 3 #10
+number_of_users = 10
 fraction = [0.1, 0.15, 0.2] # NEW(by Henry)
 
 # Slotted ALOHA settings
@@ -182,7 +182,7 @@ for seed in seeds_for_avg:
             user_gradients.sort(key=lambda x: x[1], reverse=True)
 
             for num_active_users in num_active_users_range:
-                print("*** " + str(num_active_users + 1) + " Active User(s) ***")
+                print("*** " + str(num_active_users) + " Active User(s) ***")
                 top_users = user_gradients[:num_active_users]
                 tx_prob = 1 / num_active_users
                 accuracy_sims = []
