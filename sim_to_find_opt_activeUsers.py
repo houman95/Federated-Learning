@@ -136,8 +136,15 @@ for seed in seeds_for_avg:
     np.random.seed(seed)
     tf.random.set_seed(seed)
 
+    # Save original weights
+    original_weights = model.get_weights()
+
     for epochs in epochs_range:
         print("********** " + str(epochs) + " Epoch(s) **********")
+
+        # Reset weights to original
+        model.set_weights(original_weights)
+
         for _ in range(number_of_timeframes):
             print("******** Timeframe " + str(_ + 1) + " ********")
             w_before_train = model.get_weights()
@@ -176,6 +183,8 @@ for seed in seeds_for_avg:
                 for j in range(len(w_before_train)):
                     memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] -    sparse_gradient[user_id][j]
                 gradient_l2_norm = np.linalg.norm([np.linalg.norm(g) for g in gradient_diff])
+                # Save all gradient magnitude
+                
                 user_gradients.append((user_id, gradient_l2_norm, gradient_diff))
 
             # Sort users by gradient L2 norm
@@ -192,22 +201,22 @@ for seed in seeds_for_avg:
                     for user_id, _, gradient_diff in top_users:
                         successful_users = simulate_transmissions(num_active_users, tx_prob)
                         if successful_users:
-                            success_user = successful_users[0] + 1
-                            sum_terms = [np.add(sum_terms[j], sparse_gradient[success_user - 1][j]) for j in range(len(sum_terms))]
+                            success_user = successful_users[0]
+                            sum_terms = [np.add(sum_terms[j], sparse_gradient[success_user][j]) for j in range(len(sum_terms))]
 
                     if successful_users:
                         update = [np.divide(u, num_active_users) for u in sum_terms]
                         new_weights = [np.add(w_before_train[i], update[i]) for i in range(len(w_before_train))]
                         model.set_weights(new_weights)
                         
-                    _, accuracy = model.evaluate(X_test, Y_test)
+                _, accuracy = model.evaluate(X_test, Y_test)
 
-                    results.append({
-                        'seed': seed,
-                        'epochs': epochs,
-                        'num_active_users': num_active_users,
-                        'accuracy': accuracy
-                    })
+                results.append({
+                    'seed': seed,
+                    'epochs': epochs,
+                    'num_active_users': num_active_users,
+                    'accuracy': accuracy
+                })
 
 optimal_num_active_users = {}
 
