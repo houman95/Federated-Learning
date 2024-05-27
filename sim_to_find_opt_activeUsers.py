@@ -119,7 +119,7 @@ for i in range(number_of_users):
     train_data_Y[i] = Y_train[size_of_user_ds*i:size_of_user_ds*i+size_of_user_ds]    
 
 # Additional settings for the new requirements
-epochs_range = range(1, 11)
+epochs_range = range(1, 6)
 num_active_users_range = range(1, 11)
 num_channel_sims = number_of_slots[1]
 
