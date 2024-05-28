@@ -107,6 +107,9 @@ gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
 
 # Store results
 results = []
+record = []
+num_active_users_record = np.zeros((len(seeds_for_avg), 15))
+
 seed_count = 1
 for seed in seeds_for_avg:
     print("************ Seed " + str(seed_count) + " ************")
@@ -210,8 +213,11 @@ for seed in seeds_for_avg:
             })
 
         print(f"Best number of active users for next timeframe: {best_num_active_users}")
+        record.append(best_num_active_users)
         model.set_weights(best_num_active_users_weights)
 
+    num_active_users_record[seed_count - 2,:] = record
+    record = []
 # Process results to find the optimal number of active users
 optimal_num_active_users = {}
 
