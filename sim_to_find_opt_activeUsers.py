@@ -234,14 +234,3 @@ for key, accuracies in optimal_num_active_users.items():
 print("Optimal number of active users and their accuracies:")
 for key, accuracy in optimal_num_active_users.items():
     print(f"Seed: {key[0]}, Timeframe: {key[1]}, Accuracy: {accuracy:.4f}")
-
-# Plotting
-timeframes = list(range(number_of_timeframes))
-optimal_users = [max(range(1, 11), key=lambda n: optimal_num_active_users.get((seed, timeframe), 0)) for timeframe in timeframes for seed in seeds_for_avg]
-
-plt.plot(timeframes, optimal_users, marker='o')
-plt.xlabel('Timeframes')
-plt.ylabel('Optimal Number of Active Users')
-plt.title('Optimal Number of Active Users vs. Timeframes')
-plt.grid(True)
-plt.show()
