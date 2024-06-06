@@ -244,12 +244,12 @@ for seed in seeds_for_avg:
 results_df = pd.DataFrame(results)
 
 # Save results to a CSV file in the "FL research" folder in Google Drive
-file_path = '/content/drive/My Drive/FL research/optimal_num_active_users_results_10slots_test.csv'
+file_path = '/content/drive/My Drive/FL research/optimal_num_active_users_results_10slots.csv'
 results_df.to_csv(file_path, index=False)
 print(f"Results saved to: {file_path}")
 
 # Save accuracy distributions
-distributions_file_path = '/content/drive/My Drive/FL research/Distribution files for channel sims/accuracy_distributions_10slots_test.csv'
+distributions_file_path = '/content/drive/My Drive/FL research/Distribution files for channel sims/accuracy_distributions_10slots.csv'
 with open(distributions_file_path, 'w') as f:
     for seed, timeframe_data in accuracy_distributions.items():
         for timeframe, num_active_users_data in timeframe_data.items():
