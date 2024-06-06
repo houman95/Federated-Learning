@@ -281,12 +281,12 @@ for seed in seeds_for_avg:
 results_df = pd.DataFrame(results)
 
 # Save results to a CSV file
-file_path = 'optimal_num_active_users_results_10slots_test.csv'
+file_path = 'optimal_num_active_users_results_10slots.csv'
 results_df.to_csv(file_path, index=False)
 print(f"Results saved to: {file_path}")
 
 # Save accuracy distributions
-distributions_file_path = 'accuracy_distributions_10slots_test.csv'
+distributions_file_path = 'accuracy_distributions_10slots.csv'
 with open(distributions_file_path, 'w') as f:
     for seed, timeframe_data in accuracy_distributions.items():
         for timeframe, num_active_users_data in timeframe_data.items():
