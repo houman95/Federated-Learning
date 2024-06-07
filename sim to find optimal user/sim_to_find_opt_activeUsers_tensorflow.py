@@ -18,7 +18,7 @@ learning_rate = 0.01
 epochs = 3  # Set epochs as a constant
 
 # change seed calculate the average
-seeds_for_avg = [42, 57, 85, 12, 29, 33, 7, 91]
+seeds_for_avg = [42, 57, 85] # , 12, 29, 33, 7, 91
 
 batch = 128  # VGG 16    other 32, original 32(by Henry)
 number_of_users = 10
@@ -100,7 +100,7 @@ for i in range(number_of_users):
 
 # Additional settings for the new requirements
 num_active_users_range = range(1, 11)
-num_channel_sims = 100
+num_channel_sims = 30
 
 # This is momentum for memory matrix
 gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
@@ -243,6 +243,19 @@ for seed in seeds_for_avg:
 # Prepare data for saving
 results_df = pd.DataFrame(results)
 
+# Show the optimal number of active users throughout the timeframes
+print(num_active_users_record)
+print()
+
+# Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
+print("\nLocal Gradient Magnitudes:")
+print(loc_grad_mag)
+print()
+
+print("\nGlobal Gradient Magnitudes:")
+print(global_grad_mag)
+print()
+
 # Save results to a CSV file in the "FL research" folder in Google Drive
 file_path = '/content/drive/My Drive/FL research/optimal_num_active_users_results_10slots.csv'
 results_df.to_csv(file_path, index=False)
@@ -256,7 +269,6 @@ with open(distributions_file_path, 'w') as f:
             for num_active_users, accuracies in num_active_users_data.items():
                 f.write(f'{seed},{timeframe},{num_active_users},{",".join(map(str, accuracies))}\n')
 print(f"Accuracy distributions saved to: {distributions_file_path}")
-
 
 # Process results to find the optimal number of active users
 optimal_num_active_users = {}
@@ -305,14 +317,3 @@ plt.legend(loc = 'lower right')
 plt.grid(True)
 plt.xticks(timeframes)  # Ensure the x-ticks correspond to the timeframes 1-15
 plt.show()
-
-# Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
-print("\nOptimal number of active users and their accuracies:")
-for key, accuracy in optimal_num_active_users.items():
-    print(f"Seed: {key[0]}, Timeframe: {key[1]}, Accuracy: {accuracy:.4f}")
-
-print("\nLocal Gradient Magnitudes:")
-print(loc_grad_mag)
-
-print("\nGlobal Gradient Magnitudes:")
-print(global_grad_mag)
