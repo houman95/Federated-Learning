@@ -343,10 +343,6 @@ plt.xticks(timeframes)  # Ensure the x-ticks correspond to the timeframes 1-15
 plt.show()
 
 # Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
-print("\nOptimal number of active users and their accuracies:")
-for key, accuracy in optimal_num_active_users.items():
-    print(f"Seed: {key[0]}, Timeframe: {key[1]}, Accuracy: {accuracy:.4f}")
-
 print("\nLocal Gradient Magnitudes:")
 print(loc_grad_mag)
 
