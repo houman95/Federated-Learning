@@ -280,6 +280,15 @@ for seed in seeds_for_avg:
 # Prepare data for saving
 results_df = pd.DataFrame(results)
 
+# Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
+print("\nLocal Gradient Magnitudes:")
+print(loc_grad_mag)
+print()
+
+print("\nGlobal Gradient Magnitudes:")
+print(global_grad_mag)
+print()
+
 # Save results to a CSV file
 file_path = 'optimal_num_active_users_results_10slots.csv'
 results_df.to_csv(file_path, index=False)
@@ -341,10 +350,3 @@ plt.legend(loc='lower right')
 plt.grid(True)
 plt.xticks(timeframes)  # Ensure the x-ticks correspond to the timeframes 1-15
 plt.show()
-
-# Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
-print("\nLocal Gradient Magnitudes:")
-print(loc_grad_mag)
-
-print("\nGlobal Gradient Magnitudes:")
-print(global_grad_mag)
