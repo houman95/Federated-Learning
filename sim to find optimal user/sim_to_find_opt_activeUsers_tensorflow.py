@@ -265,7 +265,7 @@ for result in results:
     key = (result['seed'], result['timeframe'])
     if key not in optimal_num_active_users:
         optimal_num_active_users[key] = []
-    optimal_num_active_users[key].append(result['accuracy'])
+    optimal_num_active_users[key].append(result['mean_accuracy'])
 
 for key, accuracies in optimal_num_active_users.items():
     max_accuracy = np.max(accuracies)
