@@ -18,7 +18,7 @@ learning_rate = 0.01
 epochs = 3  # Set epochs as a constant
 
 # change seed calculate the average
-seeds_for_avg = [42, 57, 85] # , 12, 29, 33, 7, 91
+seeds_for_avg = [42, 57, 85, 12, 29, 33, 7, 91]
 
 batch = 128  # VGG 16    other 32, original 32(by Henry)
 number_of_users = 10
@@ -100,7 +100,7 @@ for i in range(number_of_users):
 
 # Additional settings for the new requirements
 num_active_users_range = range(1, 11)
-num_channel_sims = 30
+num_channel_sims = 100
 
 # This is momentum for memory matrix
 gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
@@ -263,6 +263,9 @@ print(loc_grad_mag)
 
 print("\nGlobal Gradient Magnitudes:")
 print(global_grad_mag)
+
+print("\nCorrectly Received Packets Statistics:")
+print(correctly_received_packets_stats)
 
 # Save results to a CSV file in the "FL research" folder in Google Drive
 file_path = '/content/drive/My Drive/FL research/optimal_num_active_users_results_10slots.csv'
