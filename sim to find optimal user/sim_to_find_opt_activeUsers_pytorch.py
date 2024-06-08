@@ -15,7 +15,7 @@ learning_rate = 0.01
 epochs = 3  # Set epochs as a constant
 
 # Change seed calculate the average
-seeds_for_avg = [42, 57, 85, 12, 29, 33, 7, 91]
+seeds_for_avg = [42] #, 57, 85, 12, 29, 33, 7, 91
 
 batch = 128
 number_of_users = 10
@@ -44,7 +44,7 @@ classes = {0: "airplane", 1: "automobile", 2: "bird", 3: "cat", 4: "deer", 5: "d
 class VGG16(nn.Module):
     def __init__(self, num_classes=10):
         super(VGG16, self).__init__()
-        self.features = torchvision.models.vgg16(pretrained=True).features
+        self.features = torchvision.models.vgg16(weights=torchvision.models.VGG16_Weights.IMAGENET1K_V1).features
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(512 * 1 * 1, 512),
@@ -115,7 +115,7 @@ for i in range(number_of_users):
 
 # Additional settings for the new requirements
 num_active_users_range = range(1, 11)
-num_channel_sims = 100
+num_channel_sims = 5
 
 # This is momentum for memory matrix
 gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
@@ -315,7 +315,7 @@ with open(distributions_file_path, 'w') as f:
 print(f"Accuracy distributions saved to: {distributions_file_path}")
 
 # Save correctly received packets statistics
-packets_stats_file_path = 'correctly_received_packets_stats_10slots.csv'
+packets_stats_file_path = '/content/drive/My Drive/FL research/correctly_received_packets_stats_10slots.csv'
 with open(packets_stats_file_path, 'w') as f:
     for seed, timeframe_data in correctly_received_packets_stats.items():
         for timeframe, num_active_users_data in timeframe_data.items():
