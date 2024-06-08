@@ -62,7 +62,7 @@ def train_validation_split(X_train, Y_train, val_fraction=0.25):
     train_length = len(X_train)
     validation_length = int(train_length * val_fraction)
     X_validation = X_train[:validation_length]
-    Y_validation = Y_validation[:validation_length]
+    Y_validation = Y_train[:validation_length]
     X_train = X_train[validation_length:]
     Y_train = Y_train[validation_length:]
     return X_train, Y_train, X_validation, Y_validation
@@ -70,7 +70,7 @@ def train_validation_split(X_train, Y_train, val_fraction=0.25):
 def top_k_sparsificate_model_weights(weights, fraction):
     tmp_list = []
     for el in weights:
-        lay_list = el.reshape((-1)).tolist()
+        lay_list = el.view(-1).tolist()
         tmp_list = tmp_list + [abs(el) for el in lay_list]
     tmp_list.sort(reverse=True)
     print("total number of parameters:", len(tmp_list))
@@ -79,7 +79,7 @@ def top_k_sparsificate_model_weights(weights, fraction):
     for el in weights:
         mask = torch.ge(torch.abs(el), k_th_element)
         new_w = el * mask.float()
-        new_weights.append(new_w.numpy())
+        new_weights.append(new_w)
     return new_weights
 
 def simulate_transmissions(number_of_users, transmission_probability):
@@ -105,9 +105,6 @@ train_data_Y = torch.ones((number_of_users, size_of_user_ds), dtype=torch.long)
 train_data_X = train_data_X.to(device)
 train_data_Y = train_data_Y.to(device)
 
-train_data_X = train_data_X.to(device)
-train_data_Y = train_data_Y.to(device)
-
 for i in range(number_of_users):
     indices = list(range(size_of_user_ds * i, size_of_user_ds * (i + 1)))
     subset = torch.utils.data.Subset(trainset, indices)
@@ -118,7 +115,7 @@ for i in range(number_of_users):
 
 # Additional settings for the new requirements
 num_active_users_range = range(1, 11)
-num_channel_sims = 100
+num_channel_sims = 30
 
 # This is momentum for memory matrix
 gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
@@ -134,6 +131,9 @@ global_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))   # Global gradient mag
 
 # Dictionary to store accuracy distributions
 accuracy_distributions = {seed: {timeframe: {num_active_users: [] for num_active_users in num_active_users_range} for timeframe in range(number_of_timeframes)} for seed in seeds_for_avg}
+
+# Store mean and variance of correctly received packets
+correctly_received_packets_stats = {seed: {timeframe: {num_active_users: {'mean': [], 'variance': []} for num_active_users in num_active_users_range} for timeframe in range(number_of_timeframes)} for seed in seeds_for_avg}
 
 seed_count = 1
 for seed in seeds_for_avg:
@@ -219,13 +219,16 @@ for seed in seeds_for_avg:
             tx_prob = 1 / num_active_users
 
             accuracies = []
+            successful_packets = []
             for _ in range(num_channel_sims):
                 sum_terms = [torch.zeros_like(param).to(device) for param in w_before_train]
+                packets_received = 0
                 for _ in range(number_of_slots[1]):
                     successful_users = simulate_transmissions(num_active_users, tx_prob)
                     if successful_users:
                         success_user = successful_users[0]
                         sum_terms = [sum_terms[j] + sparse_gradient[success_user][j] for j in range(len(sum_terms))]
+                        packets_received += 1
 
                 update = [u / num_active_users for u in sum_terms]
                 new_weights = [w_before_train[i] + update[i] for i in range(len(w_before_train))]
@@ -244,6 +247,7 @@ for seed in seeds_for_avg:
                         correct += (predicted == labels).sum().item()
                 accuracy = 100 * correct / total
                 accuracies.append(accuracy)
+                successful_packets.append(packets_received)
 
             mean_accuracy = np.mean(accuracies)
             std_accuracy = np.std(accuracies)
@@ -263,6 +267,10 @@ for seed in seeds_for_avg:
             # Calculate and save global gradient magnitude for this number of active users
             update_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in update])).item()
             global_grad_mag[seed_count - 2, timeframe, num_active_users - 1] = update_l2_norm
+
+            # Store mean and variance of correctly received packets
+            correctly_received_packets_stats[seed][timeframe][num_active_users]['mean'] = np.mean(successful_packets)
+            correctly_received_packets_stats[seed][timeframe][num_active_users]['variance'] = np.var(successful_packets)
 
             # Select num_active_usr for the next timeframe and use that model
             max_accuracy = np.max(accuracy_sims)
@@ -302,6 +310,17 @@ with open(distributions_file_path, 'w') as f:
             for num_active_users, accuracies in num_active_users_data.items():
                 f.write(f'{seed},{timeframe},{num_active_users},{",".join(map(str, accuracies))}\n')
 print(f"Accuracy distributions saved to: {distributions_file_path}")
+
+# Save correctly received packets statistics
+packets_stats_file_path = 'correctly_received_packets_stats_10slots.csv'
+with open(packets_stats_file_path, 'w') as f:
+    for seed, timeframe_data in correctly_received_packets_stats.items():
+        for timeframe, num_active_users_data in timeframe_data.items():
+            for num_active_users, stats in num_active_users_data.items():
+                mean = stats['mean']
+                variance = stats['variance']
+                f.write(f'{seed},{timeframe},{num_active_users},{mean},{variance}\n')
+print(f"Correctly received packets statistics saved to: {packets_stats_file_path}")
 
 # Process results to find the optimal number of active users
 optimal_num_active_users = {}
@@ -350,3 +369,6 @@ plt.legend(loc='lower right')
 plt.grid(True)
 plt.xticks(timeframes)  # Ensure the x-ticks correspond to the timeframes 1-15
 plt.show()
+
+print("\nCorrectly Received Packets Statistics:")
+print(correctly_received_packets_stats)
