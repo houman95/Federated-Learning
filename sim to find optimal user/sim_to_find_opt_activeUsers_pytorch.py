@@ -115,7 +115,7 @@ for i in range(number_of_users):
 
 # Additional settings for the new requirements
 num_active_users_range = range(1, 11)
-num_channel_sims = 30
+num_channel_sims = 100
 
 # This is momentum for memory matrix
 gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
