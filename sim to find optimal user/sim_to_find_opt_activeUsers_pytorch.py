@@ -288,6 +288,9 @@ for seed in seeds_for_avg:
 # Prepare data for saving
 results_df = pd.DataFrame(results)
 
+# Show the optimal number of active users throughout the timeframes
+print(num_active_users_record)
+
 # Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
 print("\nLocal Gradient Magnitudes:")
 print(loc_grad_mag)
