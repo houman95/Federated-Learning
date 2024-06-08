@@ -117,6 +117,9 @@ global_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))   # Global gradient mag
 # Dictionary to store accuracy distributions
 accuracy_distributions = {seed: {timeframe: {num_active_users: [] for num_active_users in num_active_users_range} for timeframe in range(number_of_timeframes)} for seed in seeds_for_avg}
 
+# Store mean and variance of correctly received packets
+correctly_received_packets_stats = {seed: {timeframe: {num_active_users: {'mean': [], 'variance': []} for num_active_users in num_active_users_range} for timeframe in range(number_of_timeframes)} for seed in seeds_for_avg}
+
 seed_count = 1
 for seed in seeds_for_avg:
     print("************ Seed " + str(seed_count) + " ************")
@@ -194,19 +197,23 @@ for seed in seeds_for_avg:
             tx_prob = 1 / num_active_users
 
             accuracies = []
+            successful_packets = []
             for _ in range(num_channel_sims):
                 sum_terms = [np.zeros_like(w) for w in w_before_train]
+                packets_received = 0
                 for _ in range(number_of_slots[1]):
                     successful_users = simulate_transmissions(num_active_users, tx_prob)
                     if successful_users:
                         success_user = successful_users[0]
                         sum_terms = [np.add(sum_terms[j], sparse_gradient[success_user][j]) for j in range(len(sum_terms))]
+                        packets_received += 1
 
                 update = [np.divide(u, num_active_users) for u in sum_terms]
                 new_weights = [np.add(w_before_train[i], update[i]) for i in range(len(w_before_train))]
                 model.set_weights(new_weights)
                 _, accuracy = model.evaluate(X_test, Y_test)
                 accuracies.append(accuracy)
+                successful_packets.append(packets_received)
 
             mean_accuracy = np.mean(accuracies)
             std_accuracy = np.std(accuracies)
@@ -227,6 +234,10 @@ for seed in seeds_for_avg:
             update_l2_norm = np.linalg.norm([np.linalg.norm(g) for g in update])
             global_grad_mag[seed_count - 2, timeframe, num_active_users - 1] = update_l2_norm
 
+            # Store mean and variance of correctly received packets
+            correctly_received_packets_stats[seed][timeframe][num_active_users]['mean'] = np.mean(successful_packets)
+            correctly_received_packets_stats[seed][timeframe][num_active_users]['variance'] = np.var(successful_packets)
+
             # Select num_active_usr for the next timeframe and use that model
             max_accuracy = np.max(accuracy_sims)
             if accuracy_sims[-1] >= max_accuracy:
@@ -245,16 +256,13 @@ results_df = pd.DataFrame(results)
 
 # Show the optimal number of active users throughout the timeframes
 print(num_active_users_record)
-print()
 
 # Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
 print("\nLocal Gradient Magnitudes:")
 print(loc_grad_mag)
-print()
 
 print("\nGlobal Gradient Magnitudes:")
 print(global_grad_mag)
-print()
 
 # Save results to a CSV file in the "FL research" folder in Google Drive
 file_path = '/content/drive/My Drive/FL research/optimal_num_active_users_results_10slots.csv'
@@ -269,6 +277,17 @@ with open(distributions_file_path, 'w') as f:
             for num_active_users, accuracies in num_active_users_data.items():
                 f.write(f'{seed},{timeframe},{num_active_users},{",".join(map(str, accuracies))}\n')
 print(f"Accuracy distributions saved to: {distributions_file_path}")
+
+# Save correctly received packets statistics
+packets_stats_file_path = '/content/drive/My Drive/FL research/correctly_received_packets_stats_10slots.csv'
+with open(packets_stats_file_path, 'w') as f:
+    for seed, timeframe_data in correctly_received_packets_stats.items():
+        for timeframe, num_active_users_data in timeframe_data.items():
+            for num_active_users, stats in num_active_users_data.items():
+                mean = stats['mean']
+                variance = stats['variance']
+                f.write(f'{seed},{timeframe},{num_active_users},{mean},{variance}\n')
+print(f"Correctly received packets statistics saved to: {packets_stats_file_path}")
 
 # Process results to find the optimal number of active users
 optimal_num_active_users = {}
