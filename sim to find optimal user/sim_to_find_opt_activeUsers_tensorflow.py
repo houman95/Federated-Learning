@@ -11,23 +11,59 @@ from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.optimizers.legacy import Adam
 from tensorflow.keras.applications import VGG16
+import argparse
+import sys
 
-#------------------------------
-# DNN settings
-learning_rate = 0.01
-epochs = 3  # Set epochs as a constant
+# Simulate command-line arguments
+sys.argv = [
+    '--learning_rate', '0.0001',
+    '--epochs', '3',
+    '--batch_size', '64',
+    '--num_users', '5',
+    '--fraction', '0.2',
+    '--transmission_probability', '0.1',
+    '--num_slots', '5',
+    '--num_timeframes', '20',
+    '--seeds', '42',
+    '--gamma_momentum', '1',
+    '--num_channel_sims', '5'
+]
 
-# change seed calculate the average
-seeds_for_avg = [42, 57, 85, 12, 29, 33, 7, 91]
+# Define command-line arguments
+parser = argparse.ArgumentParser(description="Federated Learning with Slotted ALOHA and CIFAR-10 Dataset")
 
-batch = 128  # VGG 16    other 32, original 32(by Henry)
-number_of_users = 10
-fraction = [0.1, 0.15, 0.2, 0.4]  # NEW(by Henry)
+# Hyperparameters
+parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate for training')
+parser.add_argument('--epochs', type=int, default=3, help='Number of epochs for training')
+parser.add_argument('--batch_size', type=int, default=128, help='Batch size for training')
+parser.add_argument('--num_users', type=int, default=10, help='Number of users in federated learning')
+parser.add_argument('--fraction', type=float, nargs='+', default=[0.1, 0.15, 0.2, 0.4], help='Fractions for top-k sparsification')
 
 # Slotted ALOHA settings
-transmission_probability = 1 / number_of_users
-number_of_slots = [5, 10, 20]
-number_of_timeframes = 15
+parser.add_argument('--transmission_probability', type=float, default=0.1, help='Transmission probability for Slotted ALOHA')
+parser.add_argument('--num_slots', type=int, nargs='+', default=[5, 10, 20], help='Number of slots for Slotted ALOHA simulation')
+parser.add_argument('--num_timeframes', type=int, default=15, help='Number of timeframes for simulation')
+
+# Other settings
+parser.add_argument('--seeds', type=int, nargs='+', default=[42], help='Random seeds for averaging results')
+parser.add_argument('--gamma_momentum', type=float, nargs='+', default=[1, 0.9, 0.8, 0.7, 0.5, 0.1], help='Momentum for memory matrix')
+parser.add_argument('--num_channel_sims', type=int, default=5, help='Number of channel simulations')
+
+# Parse arguments
+args = parser.parse_args()
+
+# Use the parsed arguments
+learning_rate = args.learning_rate
+epochs = args.epochs
+batch = args.batch_size
+number_of_users = args.num_users
+fraction = args.fraction
+transmission_probability = args.transmission_probability
+number_of_slots = args.num_slots
+number_of_timeframes = args.num_timeframes
+seeds_for_avg = args.seeds
+gamma_momentum = args.gamma_momentum
+num_channel_sims = args.num_channel_sims
 
 compression_type = "no compression"
 
@@ -100,10 +136,6 @@ for i in range(number_of_users):
 
 # Additional settings for the new requirements
 num_active_users_range = range(1, 11)
-num_channel_sims = 100
-
-# This is momentum for memory matrix
-gamma_momentum = [1, 0.9, 0.8, 0.7, 0.5, 0.1]
 
 # Store results
 results = []
