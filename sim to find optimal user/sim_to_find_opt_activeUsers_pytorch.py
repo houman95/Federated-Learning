@@ -23,7 +23,7 @@ sys.argv = [
     '--transmission_probability', '0.1',
     '--num_slots', '10',
     '--num_timeframes', '15',
-    '--seeds', '42', '57', '85', '12', '29', '33', '7', '91',
+    '--seeds', '42', '57', '85', '12', '29',
     '--gamma_momentum', '1',
     '--num_channel_sims', '100',
     '--use_memory_matrix', 'true'
