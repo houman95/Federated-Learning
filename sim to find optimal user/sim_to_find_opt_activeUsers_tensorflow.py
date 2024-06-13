@@ -16,24 +16,26 @@ import sys
 
 # Simulate command-line arguments
 sys.argv = [
+    'placeholder_script_name', 
     '--learning_rate', '0.0001',
     '--epochs', '3',
     '--batch_size', '64',
-    '--num_users', '5',
+    '--num_users', '10',
     '--fraction', '0.2',
     '--transmission_probability', '0.1',
-    '--num_slots', '5',
-    '--num_timeframes', '20',
-    '--seeds', '42',
+    '--num_slots', '10',
+    '--num_timeframes', '15',
+    '--seeds', '42', '57', '85', '12', '29', '33', '7', '91',
     '--gamma_momentum', '1',
-    '--num_channel_sims', '5'
+    '--num_channel_sims', '100',
+    '--use_memory_matrix', 'true'
 ]
 
 # Define command-line arguments
 parser = argparse.ArgumentParser(description="Federated Learning with Slotted ALOHA and CIFAR-10 Dataset")
 
 # Hyperparameters
-parser.add_argument('--learning_rate', type=float, default=0.01, help='Learning rate for training')
+parser.add_argument('--learning_rate', type=float, default=0.0001, help='Learning rate for training')
 parser.add_argument('--epochs', type=int, default=3, help='Number of epochs for training')
 parser.add_argument('--batch_size', type=int, default=128, help='Batch size for training')
 parser.add_argument('--num_users', type=int, default=10, help='Number of users in federated learning')
@@ -45,9 +47,10 @@ parser.add_argument('--num_slots', type=int, nargs='+', default=[5, 10, 20], hel
 parser.add_argument('--num_timeframes', type=int, default=15, help='Number of timeframes for simulation')
 
 # Other settings
-parser.add_argument('--seeds', type=int, nargs='+', default=[42], help='Random seeds for averaging results')
+parser.add_argument('--seeds', type=int, nargs='+', default=[42, 57, 85, 12, 29, 33, 7, 91], help='Random seeds for averaging results')
 parser.add_argument('--gamma_momentum', type=float, nargs='+', default=[1, 0.9, 0.8, 0.7, 0.5, 0.1], help='Momentum for memory matrix')
 parser.add_argument('--num_channel_sims', type=int, default=5, help='Number of channel simulations')
+parser.add_argument('--use_memory_matrix', type=str, default='true', help='Switch to use memory matrix (true/false)')
 
 # Parse arguments
 args = parser.parse_args()
@@ -55,15 +58,30 @@ args = parser.parse_args()
 # Use the parsed arguments
 learning_rate = args.learning_rate
 epochs = args.epochs
-batch = args.batch_size
-number_of_users = args.num_users
+batch_size = args.batch_size
+num_users = args.num_users
 fraction = args.fraction
 transmission_probability = args.transmission_probability
-number_of_slots = args.num_slots
-number_of_timeframes = args.num_timeframes
+num_slots = args.num_slots
+num_timeframes = args.num_timeframes
 seeds_for_avg = args.seeds
 gamma_momentum = args.gamma_momentum
 num_channel_sims = args.num_channel_sims
+use_memory_matrix = args.use_memory_matrix.lower() == 'true'
+
+# Example output to ensure arguments are parsed correctly
+print(f"Learning Rate: {learning_rate}")
+print(f"Epochs: {epochs}")
+print(f"Batch Size: {batch_size}")
+print(f"Number of Users: {num_users}")
+print(f"Fraction: {fraction}")
+print(f"Transmission Probability: {transmission_probability}")
+print(f"Number of Slots: {num_slots}")
+print(f"Number of Timeframes: {num_timeframes}")
+print(f"Seeds: {seeds_for_avg}")
+print(f"Gamma Momentum: {gamma_momentum}")
+print(f"Number of Channel Simulations: {num_channel_sims}")
+print(f"Use of memory matrix: {use_memory_matrix}")
 
 compression_type = "no compression"
 
@@ -207,7 +225,10 @@ for seed in seeds_for_avg:
             w_after_train = model.get_weights()
             gradient_diff = calculate_gradient_difference(w_before_train, w_after_train)
             gradient_diff_memory = [gradient_diff[j] + memory_matrix[user_id][j] for j in range(len(gradient_diff))]
-            sparse_gradient[user_id] = top_k_sparsificate_model_weights_tf(gradient_diff_memory, fraction[2])
+            if use_memory_matrix:
+              sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff_memory, fraction[0])
+            else:
+              sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff, fraction[0])
             for j in range(len(w_before_train)):
                 memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] - sparse_gradient[user_id][j]
             gradient_l2_norm = np.linalg.norm([np.linalg.norm(g) for g in gradient_diff])
@@ -233,7 +254,7 @@ for seed in seeds_for_avg:
             for _ in range(num_channel_sims):
                 sum_terms = [np.zeros_like(w) for w in w_before_train]
                 packets_received = 0
-                for _ in range(number_of_slots[1]):
+                for _ in range(number_of_slots[0]):
                     successful_users = simulate_transmissions(num_active_users, tx_prob)
                     if successful_users:
                         success_user = successful_users[0]
