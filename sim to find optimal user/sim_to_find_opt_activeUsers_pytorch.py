@@ -90,8 +90,8 @@ transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
 testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
 
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch, shuffle=True, num_workers=2)
-testloader = torch.utils.data.DataLoader(testset, batch_size=batch, shuffle=False, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 classes = {0: "airplane", 1: "automobile", 2: "bird", 3: "cat", 4: "deer", 5: "dog", 6: "frog", 7: "horse", 8: "ship", 9: "truck"}
 
@@ -137,10 +137,10 @@ def top_k_sparsificate_model_weights(weights, fraction):
         new_weights.append(new_w)
     return new_weights
 
-def simulate_transmissions(number_of_users, transmission_probability):
+def simulate_transmissions(num_users, transmission_probability):
     current_time = int(time.time())
     np.random.seed(current_time % 123456789)
-    decisions = np.random.rand(number_of_users) < transmission_probability
+    decisions = np.random.rand(num_users) < transmission_probability
     if np.sum(decisions) == 1:
         successful_users = [i for i, decision in enumerate(decisions) if decision]
     else:
@@ -153,14 +153,14 @@ def calculate_gradient_difference(w_before, w_after):
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 num_classes = len(classes)
-size_of_user_ds = int(len(trainset) / number_of_users)
-train_data_X = torch.zeros((number_of_users, size_of_user_ds, 3, 32, 32))
-train_data_Y = torch.ones((number_of_users, size_of_user_ds), dtype=torch.long)
+size_of_user_ds = int(len(trainset) / num_users)
+train_data_X = torch.zeros((num_users, size_of_user_ds, 3, 32, 32))
+train_data_Y = torch.ones((num_users, size_of_user_ds), dtype=torch.long)
 
 train_data_X = train_data_X.to(device)
 train_data_Y = train_data_Y.to(device)
 
-for i in range(number_of_users):
+for i in range(num_users):
     indices = list(range(size_of_user_ds * i, size_of_user_ds * (i + 1)))
     subset = torch.utils.data.Subset(trainset, indices)
     subset_loader = torch.utils.data.DataLoader(subset, batch_size=size_of_user_ds, shuffle=False)
@@ -181,10 +181,10 @@ loc_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))      # Local gradient magn
 global_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))   # Global gradient magnitudes
 
 # Dictionary to store accuracy distributions
-accuracy_distributions = {seed: {timeframe: {num_active_users: [] for num_active_users in num_active_users_range} for timeframe in range(number_of_timeframes)} for seed in seeds_for_avg}
+accuracy_distributions = {seed: {timeframe: {num_active_users: [] for num_active_users in num_active_users_range} for timeframe in range(num_timeframes)} for seed in seeds_for_avg}
 
 # Store mean and variance of correctly received packets
-correctly_received_packets_stats = {seed: {timeframe: {num_active_users: {'mean': [], 'variance': []} for num_active_users in num_active_users_range} for timeframe in range(number_of_timeframes)} for seed in seeds_for_avg}
+correctly_received_packets_stats = {seed: {timeframe: {num_active_users: {'mean': [], 'variance': []} for num_active_users in num_active_users_range} for timeframe in range(num_timeframes)} for seed in seeds_for_avg}
 
 seed_count = 1
 for seed in seeds_for_avg:
@@ -199,14 +199,14 @@ for seed in seeds_for_avg:
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
-    for timeframe in range(number_of_timeframes):
+    for timeframe in range(num_timeframes):
         print("******** Timeframe " + str(timeframe + 1) + " ********")
         w_before_train = [param.data.clone() for param in model.parameters()]
         model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), w_before_train)})
 
         # Initialization of memory matrix
-        memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(number_of_users)]
-        sparse_gradient = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(number_of_users)]
+        memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
+        sparse_gradient = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
 
         initial_accuracy = 0.0
         correct = 0
@@ -226,7 +226,7 @@ for seed in seeds_for_avg:
         user_gradients = []
 
         # Train each user and calculate gradients
-        for user_id in range(number_of_users):
+        for user_id in range(num_users):
             print("User: " + str(user_id + 1))
             model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), w_before_train)})
 
