@@ -25,7 +25,7 @@ sys.argv = [
     '--transmission_probability', '0.1',
     '--num_slots', '10',
     '--num_timeframes', '15',
-    '--seeds', '42', '57', '85', '12', '29',
+    '--seeds', '42', '57', '85', '12', '29', '33', '7', '91',
     '--gamma_momentum', '1',
     '--num_channel_sims', '100',
     '--use_memory_matrix', 'true'
@@ -191,14 +191,14 @@ for seed in seeds_for_avg:
     opt = Adam(learning_rate=0.0001)
     model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
-    for timeframe in range(number_of_timeframes):
+    for timeframe in range(num_timeframes):
         print("******** Timeframe " + str(timeframe + 1) + " ********")
         w_before_train = model.get_weights()
         model.set_weights(w_before_train)
 
         # Initialization of memory matrix
-        memory_matrix = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
-        sparse_gradient = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(number_of_users)]
+        memory_matrix = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(num_users)]
+        sparse_gradient = [[np.zeros_like(weight) for weight in w_before_train] for _ in range(num_users)]
 
         _, initial_accuracy = model.evaluate(X_test, Y_test)
 
@@ -206,7 +206,7 @@ for seed in seeds_for_avg:
         user_gradients = []
 
         # Train each user and calculate gradients
-        for user_id in range(number_of_users):
+        for user_id in range(num_users):
             print("User: " + str(user_id + 1))
             model.set_weights(w_before_train)
             X_train_u = train_data_X[user_id]
@@ -254,7 +254,7 @@ for seed in seeds_for_avg:
             for _ in range(num_channel_sims):
                 sum_terms = [np.zeros_like(w) for w in w_before_train]
                 packets_received = 0
-                for _ in range(number_of_slots[0]):
+                for _ in range(num_slots[0]):
                     successful_users = simulate_transmissions(num_active_users, tx_prob)
                     if successful_users:
                         success_user = successful_users[0]
