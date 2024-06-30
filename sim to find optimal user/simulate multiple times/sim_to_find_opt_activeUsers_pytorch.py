@@ -11,6 +11,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 import sys
+import os
+from datetime import datetime
+# Add these lines at the beginning of the code to record the start time
+start_time = time.time()
 
 # Simulate command-line arguments
 sys.argv = [
@@ -150,7 +154,16 @@ def simulate_transmissions(num_users, transmission_probability):
 def calculate_gradient_difference(w_before, w_after):
     return [w_after[k] - w_before[k] for k in range(len(w_after))]
 
+# At the beginning of the code, after setting the device, add this to check and print if using GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print("\n" + "*" * 50)
+print(f"*** Using device: {device} ***")
+print("*" * 50 + "\n")
+
+
+
+
+
 
 num_classes = len(classes)
 size_of_user_ds = int(len(trainset) / num_users)
@@ -277,7 +290,7 @@ for seed in seeds_for_avg:
             for _ in range(num_channel_sims):
                 sum_terms = [torch.zeros_like(param).to(device) for param in w_before_train]
                 packets_received = 0
-                for _ in range(number_of_slots[0]):
+                for _ in range(num_slots[0]):
                     successful_users = simulate_transmissions(num_active_users, tx_prob)
                     if successful_users:
                         success_user = successful_users[0]
@@ -357,13 +370,19 @@ print()
 print("\nCorrectly Received Packets Statistics:")
 print(correctly_received_packets_stats)
 
+
+# Create a folder named as the date and hour of creating folder
+current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+save_dir = f"./results_{current_time}"
+os.makedirs(save_dir, exist_ok=True)
+
 # Save results to a CSV file
-file_path = 'optimal_num_active_users_results_10slots.csv'
+file_path = os.path.join(save_dir, 'optimal_num_active_users_results_10slots.csv')
 results_df.to_csv(file_path, index=False)
 print(f"Results saved to: {file_path}")
 
 # Save accuracy distributions
-distributions_file_path = '/content/drive/My Drive/FL research/Distribution files for channel sims/accuracy_distributions_10slots.csv'
+distributions_file_path = os.path.join(save_dir, 'accuracy_distributions_10slots.csv')
 with open(distributions_file_path, 'w') as f:
     for seed, timeframe_data in accuracy_distributions.items():
         for timeframe, num_active_users_data in timeframe_data.items():
@@ -372,7 +391,7 @@ with open(distributions_file_path, 'w') as f:
 print(f"Accuracy distributions saved to: {distributions_file_path}")
 
 # Save correctly received packets statistics
-packets_stats_file_path = '/content/drive/My Drive/FL research/correctly_received_packets_stats_10slots.csv'
+packets_stats_file_path = os.path.join(save_dir, 'correctly_received_packets_stats_10slots.csv')
 with open(packets_stats_file_path, 'w') as f:
     for seed, timeframe_data in correctly_received_packets_stats.items():
         for timeframe, num_active_users_data in timeframe_data.items():
@@ -381,8 +400,30 @@ with open(packets_stats_file_path, 'w') as f:
                 variance = stats['variance']
                 f.write(f'{seed},{timeframe},{num_active_users},{mean},{variance}\n')
 print(f"Correctly received packets statistics saved to: {packets_stats_file_path}")
+# At the end of the code, add these lines to record the end time and calculate the elapsed time
+end_time = time.time()
+elapsed_time = end_time - start_time
 
-# Process results to find the optimal number of active users
+# Prepare the content for the summary file
+summary_content = (
+    f"Start Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}\n"
+    f"End Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))}\n"
+    f"Elapsed Time: {elapsed_time:.2f} seconds\n"
+    f"Arguments: {vars(args)}\n"
+)
+
+# Save the summary to a text file
+summary_file_path = os.path.join(save_dir, 'run_summary.txt')
+with open(summary_file_path, 'w') as summary_file:
+    summary_file.write(summary_content)
+
+print(f"Run summary saved to: {summary_file_path}")
+
+
+
+
+
+
 optimal_num_active_users = {}
 
 for result in results:
