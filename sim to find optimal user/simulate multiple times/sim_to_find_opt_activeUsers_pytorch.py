@@ -193,6 +193,9 @@ num_active_users_record = np.zeros((len(seeds_for_avg), 15))
 loc_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))      # Local gradient magnitudes
 global_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))   # Global gradient magnitudes
 
+# Initialize matrix to save memory matrix magnitudes
+memory_matrix_mag = np.zeros((len(seeds_for_avg), 15, 10)) # Memory matrix magnitudes
+
 # Dictionary to store accuracy distributions
 accuracy_distributions = {seed: {timeframe: {num_active_users: [] for num_active_users in num_active_users_range} for timeframe in range(num_timeframes)} for seed in seeds_for_avg}
 
@@ -212,13 +215,14 @@ for seed in seeds_for_avg:
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
+    # Initialization of memory matrix
+    memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
+
     for timeframe in range(num_timeframes):
         print("******** Timeframe " + str(timeframe + 1) + " ********")
         w_before_train = [param.data.clone() for param in model.parameters()]
         model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), w_before_train)})
 
-        # Initialization of memory matrix
-        memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
         sparse_gradient = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
 
         initial_accuracy = 0.0
@@ -272,6 +276,9 @@ for seed in seeds_for_avg:
 
             # Save local gradient magnitude
             loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
+
+            # Save memory matrix magnitude
+            memory_matrix_mag[seed_count - 2, timeframe, user_id] = np.linalg.norm([np.linalg.norm(m) for m in memory_matrix[user_id]])
 
         # Sort users by gradient L2 norm
         user_gradients.sort(key=lambda x: x[1], reverse=True)
@@ -358,6 +365,12 @@ results_df = pd.DataFrame(results)
 # Show the optimal number of active users throughout the timeframes
 print(num_active_users_record)
 
+# Save num_active_users_record to CSV
+num_active_users_record_df = pd.DataFrame(num_active_users_record, columns=[f"Timeframe_{i+1}" for i in range(num_timeframes)])
+num_active_users_record_file_path = os.path.join(save_dir, 'num_active_users_record_10slots.csv')
+num_active_users_record_df.to_csv(num_active_users_record_file_path, index=False)
+print(f"Number of active users record saved to: {num_active_users_record_file_path}")
+
 # Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
 print("\nLocal Gradient Magnitudes:")
 print(loc_grad_mag)
@@ -369,7 +382,7 @@ print()
 
 print("\nCorrectly Received Packets Statistics:")
 print(correctly_received_packets_stats)
-
+print()
 
 # Create a folder named as the date and hour of creating folder
 current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -380,6 +393,39 @@ os.makedirs(save_dir, exist_ok=True)
 file_path = os.path.join(save_dir, 'optimal_num_active_users_results_10slots.csv')
 results_df.to_csv(file_path, index=False)
 print(f"Results saved to: {file_path}")
+
+# Save loc_grad_mag to CSV
+loc_grad_mag_df = pd.DataFrame(
+    loc_grad_mag.reshape(len(seeds_for_avg), -1),
+    columns=[f"Timeframe_{tf}_User_{user}" for tf in range(1, num_timeframes + 1) for user in num_active_users_range]
+)
+loc_grad_mag_df.insert(0, 'Seed', seeds_for_avg)  # Add seed information
+
+loc_grad_mag_file_path = os.path.join(save_dir, 'loc_grad_mag_10slots.csv')
+loc_grad_mag_df.to_csv(loc_grad_mag_file_path, index=False)
+print(f"Local gradient magnitudes saved to: {loc_grad_mag_file_path}")
+
+# Save global_grad_mag to CSV
+global_grad_mag_df = pd.DataFrame(
+    global_grad_mag.reshape(len(seeds_for_avg), -1),
+    columns=[f"Timeframe_{tf}_User_{user}" for tf in range(1, num_timeframes + 1) for user in num_active_users_range]
+)
+global_grad_mag_df.insert(0, 'Seed', seeds_for_avg)  # Add seed information
+
+global_grad_mag_file_path = os.path.join(save_dir, 'global_grad_mag_10slots.csv')
+global_grad_mag_df.to_csv(global_grad_mag_file_path, index=False)
+print(f"Global gradient magnitudes saved to: {global_grad_mag_file_path}")
+
+# Save memory_matrix_mag to CSV
+memory_matrix_mag_df = pd.DataFrame(
+    memory_matrix_mag.reshape(len(seeds_for_avg), -1),
+    columns=[f"Timeframe_{tf}_User_{user}" for tf in range(1, num_timeframes + 1) for user in num_active_users_range]
+)
+memory_matrix_mag_df.insert(0, 'Seed', seeds_for_avg)  # Add seed information
+
+memory_matrix_mag_file_path = os.path.join(save_dir, 'memory_matrix_mag_10slots.csv')
+memory_matrix_mag_df.to_csv(memory_matrix_mag_file_path, index=False)
+print(f"Memory matrix magnitudes saved to: {memory_matrix_mag_file_path}")
 
 # Save accuracy distributions
 distributions_file_path = os.path.join(save_dir, 'accuracy_distributions_10slots.csv')
