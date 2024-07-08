@@ -192,6 +192,7 @@ num_active_users_record = np.zeros((len(seeds_for_avg), 15))
 # Initialize matrices to save gradient magnitudes
 loc_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))      # Local gradient magnitudes
 global_grad_mag = np.zeros((len(seeds_for_avg), 15, 10))   # Global gradient magnitudes
+loc_grad_mag_memory = np.zeros((len(seeds_for_avg), 15, 10))
 
 # Initialize matrix to save memory matrix magnitudes
 memory_matrix_mag = np.zeros((len(seeds_for_avg), 15, 10)) # Memory matrix magnitudes
@@ -273,10 +274,14 @@ for seed in seeds_for_avg:
             for j in range(len(w_before_train)):
                 memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] - sparse_gradient[user_id][j]
             gradient_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff])).item()
-            user_gradients.append((user_id, gradient_l2_norm, gradient_diff_memory))
+            gradient_l2_norm_memory = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff_memory])).item()
+            user_gradients.append((user_id, gradient_l2_norm_memory, gradient_diff_memory))
 
             # Save local gradient magnitude
             loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
+
+            # Save local gradient magnitude with memory
+            loc_grad_mag_memory[seed_count - 2, timeframe, user_id] = gradient_l2_norm_memory
 
             # Store memory matrix magnitude
             memory_matrix_mag[seed_count - 2, timeframe, user_id] = np.linalg.norm([np.linalg.norm(m.cpu().numpy()) for m in memory_matrix[user_id]])
@@ -406,6 +411,17 @@ loc_grad_mag_df.insert(0, 'Seed', seeds_for_avg)  # Add seed information
 loc_grad_mag_file_path = os.path.join(save_dir, 'loc_grad_mag_10slots.csv')
 loc_grad_mag_df.to_csv(loc_grad_mag_file_path, index=False)
 print(f"Local gradient magnitudes saved to: {loc_grad_mag_file_path}")
+
+# Save loc_grad_mag_memory to CSV
+loc_grad_mag_memory_df = pd.DataFrame(
+    loc_grad_mag_memory.reshape(len(seeds_for_avg), -1),
+    columns=[f"Timeframe_{tf}_User_{user}" for tf in range(1, num_timeframes + 1) for user in num_active_users_range]
+)
+loc_grad_mag_memory_df.insert(0, 'Seed', seeds_for_avg)  # Add seed information
+
+loc_grad_mag_memory_file_path = os.path.join(save_dir, 'loc_grad_mag_memory_10slots.csv')
+loc_grad_mag_memory_df.to_csv(loc_grad_mag_memory_file_path, index=False)
+print(f"Local gradient magnitudes with memory saved to: {loc_grad_mag_memory_file_path}")
 
 # Save global_grad_mag to CSV
 global_grad_mag_df = pd.DataFrame(
