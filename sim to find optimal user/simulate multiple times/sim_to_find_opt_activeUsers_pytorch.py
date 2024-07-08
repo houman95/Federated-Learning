@@ -216,6 +216,7 @@ for seed in seeds_for_avg:
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     # Initialization of memory matrix
+    w_before_train = [param.data.clone() for param in model.parameters()]
     memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
 
     for timeframe in range(num_timeframes):
@@ -277,8 +278,9 @@ for seed in seeds_for_avg:
             # Save local gradient magnitude
             loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
 
-            # Save memory matrix magnitude
-            memory_matrix_mag[seed_count - 2, timeframe, user_id] = np.linalg.norm([np.linalg.norm(m) for m in memory_matrix[user_id]])
+            # Store memory matrix magnitude
+            memory_matrix_mag[seed_count - 2, timeframe, user_id] = np.linalg.norm([np.linalg.norm(m.cpu().numpy()) for m in memory_matrix[user_id]])
+
 
         # Sort users by gradient L2 norm
         user_gradients.sort(key=lambda x: x[1], reverse=True)
