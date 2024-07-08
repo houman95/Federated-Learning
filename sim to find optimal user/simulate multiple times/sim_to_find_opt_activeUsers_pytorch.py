@@ -273,7 +273,7 @@ for seed in seeds_for_avg:
             for j in range(len(w_before_train)):
                 memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] - sparse_gradient[user_id][j]
             gradient_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff])).item()
-            user_gradients.append((user_id, gradient_l2_norm, gradient_diff))
+            user_gradients.append((user_id, gradient_l2_norm, gradient_diff_memory))
 
             # Save local gradient magnitude
             loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
