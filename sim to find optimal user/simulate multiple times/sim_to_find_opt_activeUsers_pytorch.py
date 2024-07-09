@@ -280,19 +280,15 @@ for seed in seeds_for_avg:
             
             if use_memory_matrix:
                 user_gradients.append((user_id, gradient_l2_norm_memory, gradient_diff_memory))
+                # Save local gradient magnitude with memory
+                loc_grad_mag_memory[seed_count - 2, timeframe, user_id] = gradient_l2_norm_memory
+                # Store memory matrix magnitude
+                memory_matrix_mag[seed_count - 2, timeframe, user_id] = np.linalg.norm([np.linalg.norm(m.cpu().numpy()) for m in memory_matrix[user_id]])
             else:
                 user_gradients.append((user_id, gradient_l2_norm, gradient_diff))
-
-            # Save local gradient magnitude
-            loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
-
-            # Save local gradient magnitude with memory
-            loc_grad_mag_memory[seed_count - 2, timeframe, user_id] = gradient_l2_norm_memory
-
-            # Store memory matrix magnitude
-            memory_matrix_mag[seed_count - 2, timeframe, user_id] = np.linalg.norm([np.linalg.norm(m.cpu().numpy()) for m in memory_matrix[user_id]])
-
-
+                # Save local gradient magnitude
+                loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
+            
         # Sort users by gradient L2 norm
         user_gradients.sort(key=lambda x: x[1], reverse=True)
 
@@ -383,19 +379,6 @@ num_active_users_record_df = pd.DataFrame(num_active_users_record, columns=[f"Ti
 num_active_users_record_file_path = os.path.join(save_dir, 'num_active_users_record_10slots.csv')
 num_active_users_record_df.to_csv(num_active_users_record_file_path, index=False)
 print(f"Number of active users record saved to: {num_active_users_record_file_path}")
-
-# Print optimal_num_active_users, loc_grad_mag, and global_grad_mag
-print("\nLocal Gradient Magnitudes:")
-print(loc_grad_mag)
-print()
-
-print("\nGlobal Gradient Magnitudes:")
-print(global_grad_mag)
-print()
-
-print("\nCorrectly Received Packets Statistics:")
-print(correctly_received_packets_stats)
-print()
 
 # Create a folder named as the date and hour of creating folder
 current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
