@@ -267,15 +267,21 @@ for seed in seeds_for_avg:
             w_after_train = [param.data.clone() for param in model.parameters()]
             gradient_diff = calculate_gradient_difference(w_before_train, w_after_train)
             gradient_diff_memory = [gradient_diff[j] + memory_matrix[user_id][j] for j in range(len(gradient_diff))]
+            
             if use_memory_matrix:
               sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff_memory, fraction[0])
             else:
               sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff, fraction[0])
+                
             for j in range(len(w_before_train)):
                 memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] - sparse_gradient[user_id][j]
             gradient_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff])).item()
             gradient_l2_norm_memory = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff_memory])).item()
-            user_gradients.append((user_id, gradient_l2_norm_memory, gradient_diff_memory))
+            
+            if use_memory_matrix:
+                user_gradients.append((user_id, gradient_l2_norm_memory, gradient_diff_memory))
+            else:
+                user_gradients.append((user_id, gradient_l2_norm, gradient_diff))
 
             # Save local gradient magnitude
             loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
