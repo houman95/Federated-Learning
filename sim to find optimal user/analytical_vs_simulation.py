@@ -7,35 +7,35 @@ from scipy.special import comb
 def probability_k_unique_users(n, m, p, k):
     # Slot success probability
     P_s = n * p * (1 - p)**(n - 1)
-    
+
     if k == 0:
         # Probability that no users are decoded is the probability that all m slots fail
         return (1 - P_s) ** m
-    else:
-        total_prob = 0
-        for s in range(1, m + 1):
-            # Binomial coefficient (m choose s)
-            comb_ms = comb(m, s)
-            # Probability of s successful transmissions
-            success_prob = P_s**s
-            # Probability of m-s failed transmissions
-            failure_prob = (1 - P_s)**(m - s)
-            # Binomial coefficient (n choose k)
-            choose_k_from_n = comb(n, k)
-            # Ways to assign s successes to k users, allowing repetitions
-            repeated_selections = k**s
+    
+    total_prob = 0
+    for s in range(1, m + 1):
+        # Binomial coefficient (m choose s)
+        comb_ms = comb(m, s)
+        # Probability of s successful transmissions
+        success_prob = P_s**s
+        # Probability of m-s failed transmissions
+        failure_prob = (1 - P_s)**(m - s)
+        # Binomial coefficient (n choose k)
+        choose_k_from_n = comb(n, k)
+        # Ways to assign s successes to k users, allowing repetitions
+        repeated_selections = k**s
 
-            # Calculate the term for this s
-            term = (comb_ms * success_prob * failure_prob * choose_k_from_n * repeated_selections) / (n**s)
-            total_prob += term
+        # Calculate the term for this s
+        term = (comb_ms * success_prob * failure_prob * choose_k_from_n * repeated_selections) / (n**s)
+        total_prob += term
 
-        return total_prob
+    return total_prob
 
 # Parameters
 n = 10  # Number of users
 m = 10  # Number of slots
 p = 0.5  # Probability of transmission per slot
-k_values = range(0, n + 1)  # Different k values to evaluate
+k_values = range(0, n + 1)  # Different k values to evaluate (including 0)
 num_timeframes = 15  # Number of timeframes
 num_simulations_2 = 1000  # Number of simulations for method 2
 
@@ -61,7 +61,7 @@ def simulate_multiple_timeframes_method_2(num_timeframes):
     results = []
 
     for timeframe in range(num_timeframes):
-        num_active_users = 3
+        num_active_users = 6
         tx_prob = 1 / num_active_users
         successful_transmissions = []
 
@@ -72,7 +72,7 @@ def simulate_multiple_timeframes_method_2(num_timeframes):
             else:
                 successful_transmissions.append(None)
 
-        results.append(len([user for user in successful_transmissions if user is not None]))
+        results.append(successful_transmissions)
 
     return results
 
@@ -82,8 +82,14 @@ all_results_method_2 = []
 for _ in range(num_simulations_2):
     all_results_method_2.extend(simulate_multiple_timeframes_method_2(num_timeframes))
 
+# Flatten the list of results
+all_successful_transmissions = [user for sublist in all_results_method_2 for user in sublist if user is not None]
+
+# Count the number of unique users decoded in each timeframe
+unique_users_per_timeframe = [len(set(timeframe)) for timeframe in all_results_method_2]
+
 # Convert results to DataFrame for analysis
-df_method_2 = pd.DataFrame(all_results_method_2, columns=['Successful Transmissions'])
+df_method_2 = pd.DataFrame(unique_users_per_timeframe, columns=['Successful Transmissions'])
 
 # Calculate probabilities for the simulation method
 probabilities_simulation = df_method_2['Successful Transmissions'].value_counts(normalize=True).sort_index()
