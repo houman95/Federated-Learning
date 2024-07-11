@@ -12,24 +12,25 @@ def probability_k_unique_users(n, m, p, k):
         # Probability that no users are decoded is the probability that all m slots fail
         return (1 - P_s) ** m
     
-    total_prob = 0
-    for s in range(1, m + 1):
-        # Binomial coefficient (m choose s)
-        comb_ms = comb(m, s)
-        # Probability of s successful transmissions
-        success_prob = P_s**s
-        # Probability of m-s failed transmissions
-        failure_prob = (1 - P_s)**(m - s)
-        # Binomial coefficient (n choose k)
-        choose_k_from_n = comb(n, k)
-        # Ways to assign s successes to k users, allowing repetitions
-        repeated_selections = k**s
+    else:
+        total_prob = 0
+        for s in range(1, m + 1):
+            # Binomial coefficient (m choose s)
+            comb_ms = comb(m, s)
+            # Probability of s successful transmissions
+            success_prob = P_s**s
+            # Probability of m-s failed transmissions
+            failure_prob = (1 - P_s)**(m - s)
+            # Binomial coefficient (n choose k)
+            choose_k_from_n = comb(n, k)
+            # Ways to assign s successes to k users, allowing repetitions
+            repeated_selections = k**s
 
-        # Calculate the term for this s
-        term = (comb_ms * success_prob * failure_prob * choose_k_from_n * repeated_selections) / (n**s)
-        total_prob += term
+            # Calculate the term for this s
+            term = (comb_ms * success_prob * failure_prob * choose_k_from_n * repeated_selections) / (n**s)
+            total_prob += term
 
-    return total_prob
+        return total_prob
 
 # Parameters
 n = 10  # Number of users
