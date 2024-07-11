@@ -52,7 +52,7 @@ probabilities_analytical = [prob / prob_sum for prob in probabilities_analytical
 def simulate_transmissions(number_of_users, transmission_probability):
     decisions = np.random.rand(number_of_users) < transmission_probability
     if np.sum(decisions) == 1:
-        successful_users = [i for i, decision in enumerate(decisions) if decision]
+        successful_users = [i + 1 for i, decision in enumerate(decisions) if decision]
     else:
         successful_users = []
     return successful_users
@@ -71,7 +71,7 @@ def simulate_multiple_timeframes_method_2(num_timeframes):
             if successful_users:
                 successful_transmissions.append(successful_users[0])
             else:
-                successful_transmissions.append(None)
+                successful_transmissions.append(0)
 
         results.append(successful_transmissions)
 
