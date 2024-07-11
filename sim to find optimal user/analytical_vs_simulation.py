@@ -11,31 +11,31 @@ def probability_k_unique_users(n, m, p, k):
     if k == 0:
         # Probability that no users are decoded is the probability that all m slots fail
         return (1 - P_s) ** m
-    
-    total_prob = 0
-    for s in range(1, m + 1):
-        # Binomial coefficient (m choose s)
-        comb_ms = comb(m, s)
-        # Probability of s successful transmissions
-        success_prob = P_s**s
-        # Probability of m-s failed transmissions
-        failure_prob = (1 - P_s)**(m - s)
-        # Binomial coefficient (n choose k)
-        choose_k_from_n = comb(n, k)
-        # Ways to assign s successes to k users, allowing repetitions
-        repeated_selections = k**s
+    else:
+        total_prob = 0
+        for s in range(1, m + 1):
+            # Binomial coefficient (m choose s)
+            comb_ms = comb(m, s)
+            # Probability of s successful transmissions
+            success_prob = P_s**s
+            # Probability of m-s failed transmissions
+            failure_prob = (1 - P_s)**(m - s)
+            # Binomial coefficient (n choose k)
+            choose_k_from_n = comb(n, k)
+            # Ways to assign s successes to k users, allowing repetitions
+            repeated_selections = k**s
 
-        # Calculate the term for this s
-        term = (comb_ms * success_prob * failure_prob * choose_k_from_n * repeated_selections) / (n**s)
-        total_prob += term
+            # Calculate the term for this s
+            term = (comb_ms * success_prob * failure_prob * choose_k_from_n * repeated_selections) / (n**s)
+            total_prob += term
 
-    return total_prob
+        return total_prob
 
 # Parameters
 n = 10  # Number of users
 m = 10  # Number of slots
 p = 0.5  # Probability of transmission per slot
-k_values = range(1, n + 1)  # Different k values to evaluate
+k_values = range(0, n + 1)  # Different k values to evaluate
 num_timeframes = 15  # Number of timeframes
 num_simulations_2 = 1000  # Number of simulations for method 2
 
@@ -61,7 +61,7 @@ def simulate_multiple_timeframes_method_2(user_gradients, num_timeframes):
     results = []
 
     for timeframe in range(num_timeframes):
-        num_active_users = 3
+        num_active_users = 5
         tx_prob = 1 / num_active_users
         successful_transmissions = []
 
@@ -119,7 +119,7 @@ for k, prob in zip(k_values, probabilities_analytical):
     print(f'Probability of decoding {k} unique users: {prob:.4f}')
 
 print("\nSimulation Method:")
-for k in range(1, m + 1):
+for k in range(0, m + 1):
     prob = probabilities_simulation.get(k, 0)
     print(f'Probability of decoding {k} unique users: {prob:.4f}')
 
