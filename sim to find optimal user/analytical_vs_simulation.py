@@ -57,11 +57,11 @@ def simulate_transmissions(number_of_users, transmission_probability):
     return successful_users
 
 # Function to simulate multiple timeframes using the second method
-def simulate_multiple_timeframes_method_2(user_gradients, num_timeframes):
+def simulate_multiple_timeframes_method_2(num_timeframes):
     results = []
 
     for timeframe in range(num_timeframes):
-        num_active_users = 5
+        num_active_users = 3
         tx_prob = 1 / num_active_users
         successful_transmissions = []
 
@@ -76,14 +76,11 @@ def simulate_multiple_timeframes_method_2(user_gradients, num_timeframes):
 
     return results
 
-# Sample gradients data (replace this with your actual gradients data)
-user_gradients = np.array([0.1, 0.4, 0.3, 0.7, 0.6, 0.2, 0.9, 0.8, 0.5, 0.05])
-
 # Run the simulations for method 2
 all_results_method_2 = []
 
 for _ in range(num_simulations_2):
-    all_results_method_2.extend(simulate_multiple_timeframes_method_2(user_gradients, num_timeframes))
+    all_results_method_2.extend(simulate_multiple_timeframes_method_2(num_timeframes))
 
 # Convert results to DataFrame for analysis
 df_method_2 = pd.DataFrame(all_results_method_2, columns=['Successful Transmissions'])
