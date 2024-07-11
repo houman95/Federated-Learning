@@ -8,6 +8,10 @@ def probability_k_unique_users(n, m, p, k):
     # Slot success probability
     P_s = n * p * (1 - p)**(n - 1)
     
+    if k == 0:
+        # Probability that no users are decoded is the probability that all m slots fail
+        return (1 - P_s) ** m
+    
     total_prob = 0
     for s in range(1, m + 1):
         # Binomial coefficient (m choose s)
