@@ -146,7 +146,7 @@ def simulate_transmissions(num_users, transmission_probability):
     np.random.seed(current_time % 123456789)
     decisions = np.random.rand(num_users) < transmission_probability
     if np.sum(decisions) == 1:
-        successful_users = [i + 1 for i, decision in enumerate(decisions) if decision]
+        successful_users = [i for i, decision in enumerate(decisions) if decision]
     else:
         successful_users = []
     return successful_users
