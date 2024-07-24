@@ -23,7 +23,7 @@ sys.argv = [
     '--epochs', '3',
     '--batch_size', '64',
     '--num_users', '10',
-    '--fraction', '0.2',
+    '--fraction', '0.1',
     '--transmission_probability', '0.1',
     '--num_slots', '10',
     '--num_timeframes', '15',
