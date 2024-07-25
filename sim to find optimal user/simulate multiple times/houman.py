@@ -13,6 +13,7 @@ import argparse
 import sys
 import os
 from datetime import datetime
+
 # Add these lines at the beginning of the code to record the start time
 start_time = time.time()
 
@@ -160,11 +161,6 @@ print("\n" + "*" * 50)
 print(f"*** Using device: {device} ***")
 print("*" * 50 + "\n")
 
-
-
-
-
-
 num_classes = len(classes)
 size_of_user_ds = int(len(trainset) / num_users)
 train_data_X = torch.zeros((num_users, size_of_user_ds, 3, 32, 32))
@@ -224,6 +220,7 @@ for seed in seeds_for_avg:
         print("******** Timeframe " + str(timeframe + 1) + " ********")
         w_before_train = [param.data.clone() for param in model.parameters()]
         model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), w_before_train)})
+        torch.cuda.empty_cache()
 
         sparse_gradient = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
 
@@ -249,6 +246,7 @@ for seed in seeds_for_avg:
         for user_id in range(num_users):
             print("User: " + str(user_id + 1))
             model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), w_before_train)})
+            torch.cuda.empty_cache()
 
             X_train_u = train_data_X[user_id]
             Y_train_u = train_data_Y[user_id]
@@ -271,9 +269,9 @@ for seed in seeds_for_avg:
             gradient_diff_memory = [gradient_diff[j] + memory_matrix[user_id][j] for j in range(len(gradient_diff))]
             
             if use_memory_matrix:
-              sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff_memory, fraction[0])
+                sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff_memory, fraction[0])
             else:
-              sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff, fraction[0])
+                sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff, fraction[0])
                 
             for j in range(len(w_before_train)):
                 memory_matrix[user_id][j] = gamma_momentum[0] * memory_matrix[user_id][j] + gradient_diff_memory[j] - sparse_gradient[user_id][j]
@@ -361,12 +359,13 @@ for seed in seeds_for_avg:
             # Select num_active_usr for the next timeframe and use that model
             max_accuracy = np.max(accuracy_sims)
             if accuracy_sims[-1] >= max_accuracy:
-              best_num_active_users = len(accuracy_sims)
-              best_num_active_users_weights = new_weights
+                best_num_active_users = len(accuracy_sims)
+                best_num_active_users_weights = new_weights
 
         print(f"Best number of active users for next timeframe: {best_num_active_users}")
         record.append(best_num_active_users)
         model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), best_num_active_users_weights)})
+        torch.cuda.empty_cache()
 
     num_active_users_record[seed_count - 2, :] = record
     record = []
@@ -457,6 +456,7 @@ with open(packets_stats_file_path, 'w') as f:
                 variance = stats['variance']
                 f.write(f'{seed},{timeframe},{num_active_users},{mean},{variance}\n')
 print(f"Correctly received packets statistics saved to: {packets_stats_file_path}")
+
 # At the end of the code, add these lines to record the end time and calculate the elapsed time
 end_time = time.time()
 elapsed_time = end_time - start_time
@@ -475,11 +475,6 @@ with open(summary_file_path, 'w') as summary_file:
     summary_file.write(summary_content)
 
 print(f"Run summary saved to: {summary_file_path}")
-
-
-
-
-
 
 optimal_num_active_users = {}
 
