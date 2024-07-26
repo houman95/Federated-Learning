@@ -214,14 +214,14 @@ for seed in seeds_for_avg:
 
     # Initialization of memory matrix
     w_before_train = [param.data.clone() for param in model.parameters()]
-    memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
 
     for timeframe in range(num_timeframes):
         print("******** Timeframe " + str(timeframe + 1) + " ********")
         w_before_train = [param.data.clone() for param in model.parameters()]
         model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), w_before_train)})
         torch.cuda.empty_cache()
-
+        
+        memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
         sparse_gradient = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
 
         initial_accuracy = 0.0
