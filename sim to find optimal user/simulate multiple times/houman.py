@@ -30,7 +30,7 @@ sys.argv = [
     '--num_timeframes', '15',
     '--seeds', '42','57', '85', '12', '29',
     '--gamma_momentum', '1',
-    '--num_channel_sims', '100',
+    '--num_channel_sims', '50',
     '--use_memory_matrix', 'false'
 ]
 
@@ -53,7 +53,7 @@ parser.add_argument('--num_timeframes', type=int, default=15, help='Number of ti
 parser.add_argument('--seeds', type=int, nargs='+', default=[42, 57, 85, 12, 29, 33, 7, 91], help='Random seeds for averaging results')
 parser.add_argument('--gamma_momentum', type=float, nargs='+', default=[1, 0.9, 0.8, 0.7, 0.5, 0.1], help='Momentum for memory matrix')
 parser.add_argument('--num_channel_sims', type=int, default=5, help='Number of channel simulations')
-parser.add_argument('--use_memory_matrix', type=str, default='true', help='Switch to use memory matrix (true/false)')
+parser.add_argument('--use_memory_matrix', type=str, default='true', choices=['true', 'false', 'random'], help='Switch to use memory matrix (true/false)')
 
 # Parse arguments
 args = parser.parse_args()
@@ -268,7 +268,7 @@ for seed in seeds_for_avg:
             gradient_diff = calculate_gradient_difference(w_before_train, w_after_train)
             gradient_diff_memory = [gradient_diff[j] + memory_matrix[user_id][j] for j in range(len(gradient_diff))]
             
-            if use_memory_matrix:
+            if use_memory_matrix == 'true':
                 sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff_memory, fraction[0])
             else:
                 sparse_gradient[user_id] = top_k_sparsificate_model_weights(gradient_diff, fraction[0])
@@ -278,7 +278,7 @@ for seed in seeds_for_avg:
             gradient_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff])).item()
             gradient_l2_norm_memory = torch.norm(torch.stack([torch.norm(g) for g in gradient_diff_memory])).item()
             torch.cuda.empty_cache()    
-            if use_memory_matrix:
+            if use_memory_matrix == 'true':
                 user_gradients.append((user_id, gradient_l2_norm_memory, gradient_diff_memory))
                 # Save local gradient magnitude with memory
                 loc_grad_mag_memory[seed_count - 2, timeframe, user_id] = gradient_l2_norm_memory
@@ -290,7 +290,12 @@ for seed in seeds_for_avg:
                 loc_grad_mag[seed_count - 2, timeframe, user_id] = gradient_l2_norm
             
         # Sort users by gradient L2 norm
-        user_gradients.sort(key=lambda x: x[1], reverse=True)
+        if use_memory_matrix == 'true':
+            user_gradients.sort(key=lambda x: x[1], reverse=True)
+        elif use_memory_matrix == 'false':
+            user_gradients.sort(key=lambda x: x[1], reverse=True)
+        else:  # random scenario
+            rnd.shuffle(user_gradients)
 
         best_num_active_users = 1
 
