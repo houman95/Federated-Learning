@@ -24,14 +24,14 @@ sys.argv = [
     '--epochs', '3',
     '--batch_size', '64',
     '--num_users', '10',
-    '--fraction', '0.1',
+    '--fraction', '0.2',
     '--transmission_probability', '0.1',
-    '--num_slots', '10',
+    '--num_slots', '5',
     '--num_timeframes', '15',
     '--seeds', '42','57', '85', '12', '29',
     '--gamma_momentum', '1',
     '--num_channel_sims', '50',
-    '--use_memory_matrix', 'false'
+    '--use_memory_matrix', 'random'
 ]
 
 # Define command-line arguments
@@ -70,7 +70,7 @@ num_timeframes = args.num_timeframes
 seeds_for_avg = args.seeds
 gamma_momentum = args.gamma_momentum
 num_channel_sims = args.num_channel_sims
-use_memory_matrix = args.use_memory_matrix.lower() == 'true'
+use_memory_matrix = args.use_memory_matrix.lower()
 
 # Example output to ensure arguments are parsed correctly
 print(f"Learning Rate: {learning_rate}")
@@ -294,7 +294,7 @@ for seed in seeds_for_avg:
             user_gradients.sort(key=lambda x: x[1], reverse=True)
         elif use_memory_matrix == 'false':
             user_gradients.sort(key=lambda x: x[1], reverse=True)
-        else:  # random scenario
+        elif use_memory_matrix == 'random':
             rnd.shuffle(user_gradients)
 
         best_num_active_users = 1
@@ -381,7 +381,7 @@ current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
 # Show the optimal number of active users throughout the timeframes
 print(num_active_users_record)
-save_dir = f"./results_{current_time}"
+save_dir = f"./Randomresults_{current_time}"
 # Create a folder named as the date and hour of creating folder
 
 os.makedirs(save_dir, exist_ok=True)
