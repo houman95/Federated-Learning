@@ -322,6 +322,10 @@ for seed in seeds_for_avg:
                 new_weights = [w_before_train[i] + update[i] for i in range(len(w_before_train))]
                 model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), new_weights)})
 
+                # Calculate and save global gradient magnitude for this number of active users
+                update_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in update])).item()
+                global_grad_mag[seed_count - 2, timeframe, num_active_users - 1] = update_l2_norm
+
                 correct = 0
                 total = 0
                 model.eval()
@@ -352,10 +356,6 @@ for seed in seeds_for_avg:
 
             # Store the accuracy distribution
             accuracy_distributions[seed][timeframe][num_active_users] = accuracies
-
-            # Calculate and save global gradient magnitude for this number of active users
-            update_l2_norm = torch.norm(torch.stack([torch.norm(g) for g in update])).item()
-            global_grad_mag[seed_count - 2, timeframe, num_active_users - 1] = update_l2_norm
             
             # Store mean and variance of correctly received packets
             correctly_received_packets_stats[seed][timeframe][num_active_users]['mean'] = np.mean(successful_packets)
