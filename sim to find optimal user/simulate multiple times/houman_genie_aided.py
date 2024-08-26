@@ -183,7 +183,8 @@ for run in range(num_runs):
         # Initialize the model
         model = VGG16(num_classes=num_classes).to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
 
         w_before_train = [param.data.clone() for param in model.parameters()]
 
