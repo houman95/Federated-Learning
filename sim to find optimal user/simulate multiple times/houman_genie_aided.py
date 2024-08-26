@@ -17,7 +17,7 @@ start_time = time.time()
 # Simulate command-line arguments
 sys.argv = [
     'placeholder_script_name',
-    '--learning_rate', '0.0001',
+    '--learning_rate', '0.01',
     '--epochs', '3',
     '--batch_size', '64',
     '--num_users', '10',
