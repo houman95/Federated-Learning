@@ -25,8 +25,8 @@ sys.argv = [
     '--transmission_probability', '0.1',
     '--num_slots', '10',
     '--num_timeframes', '15',
-    '--seeds', '56',
-    '--gamma_momentum', '0.2', '85', '12', '29', '42',
+    '--seeds', '56', '85', '12', '29', '42',
+    '--gamma_momentum', '0.2',
     '--use_memory_matrix', 'true'
 ]
 
