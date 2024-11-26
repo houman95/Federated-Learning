@@ -26,7 +26,7 @@ sys.argv = [
     '--num_slots', '10',
     '--num_timeframes', '15',
     '--seeds', '56',
-    '--gamma_momentum', '0.2',
+    '--gamma_momentum', '0.2', '85', '12', '29', '42',
     '--use_memory_matrix', 'true'
 ]
 
@@ -58,6 +58,7 @@ num_timeframes = args.num_timeframes
 seeds_for_avg = args.seeds
 gamma_momentum = args.gamma_momentum
 use_memory_matrix = args.use_memory_matrix.lower() == 'true'
+tx_prob = args.transmission_probability
 
 # Device configuration
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -128,7 +129,7 @@ for i in range(num_users):
         train_data_Y[i] = target
 
 # Initialize matrices for results
-num_runs = 1  # only simulate the training process once
+num_runs = 5  # only simulate the training process once
 # Initialize matrices for results with an additional dimension for num_active_users
 global_grad_mag = np.zeros((num_runs, len(seeds_for_avg), num_timeframes))
 
@@ -192,7 +193,7 @@ for run in range(num_runs):
         for timeframe in range(num_timeframes):
             print(f"******** Timeframe {timeframe + 1} ********")
             if timeframe > 0:
-                model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), best_weights)})
+                model.load_state_dict({k: v for k, v in zip(model.state_dict().keys(), new_weights)})
             torch.cuda.empty_cache()
 
             #memory_matrix = [[torch.zeros_like(param).to(device) for param in w_before_train] for _ in range(num_users)]
@@ -255,10 +256,11 @@ for run in range(num_runs):
             packets_received = 0
             distinct_users = set()
 
+            
             for _ in range(num_slots):
                 successful_users = simulate_transmissions(num_users, tx_prob)
                 if successful_users:
-                    success_user = top_users[successful_users[0]][0]
+                    success_user = successful_users[0]
                     if success_user not in distinct_users:
                         sum_terms = [sum_terms[j] + sparse_gradient[success_user][j] for j in range(len(sum_terms))]
                         packets_received += 1
@@ -280,7 +282,7 @@ for run in range(num_runs):
             accuracy = 100 * correct / len(testset)            
 
             # Store results and check if this is the best accuracy so far
-            accuracy_distributions[run][seed_index][timeframe][num_active_users] = accuracy
+            accuracy_distributions[run][seed_index][timeframe] = accuracy
 
             # Calculate the update to the weights
             weight_update = [new_weights[i] - w_before_train[i] for i in range(len(w_before_train))]
